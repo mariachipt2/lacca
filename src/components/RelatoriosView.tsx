@@ -671,7 +671,7 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
           {/* TABLE OF TRANSACTIONS */}
           <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
             <div className="table-wrap">
-              <table>
+              <table className="responsive-table">
                 <thead>
                   <tr>
                     <th>Data</th>
@@ -697,18 +697,18 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
                         const isPending = t.paymentMethod === 'Pagar Depois' || !t.paymentMethod;
                         return (
                           <tr key={t.id}>
-                            <td>{fmtDate(t.data)}</td>
-                            <td>
+                            <td data-label="Data">{fmtDate(t.data)}</td>
+                            <td data-label="Tipo">
                               <span className={`badge ${isIncome ? (isPending ? 'badge-warning' : 'badge-success') : 'badge-danger'}`}>
                                 {isPending ? 'Pendente' : t.tipo}
                               </span>
                             </td>
-                            <td><strong>{t.descricao}</strong></td>
-                            <td className="text-muted">{t.paymentMethod || '—'}</td>
-                            <td className={`text-right font-bold ${isIncome ? (isPending ? 'text-warning' : 'text-success') : 'text-danger'}`}>
+                            <td data-label="Descrição"><strong>{t.descricao}</strong></td>
+                            <td data-label="Método" className="text-muted">{t.paymentMethod || '—'}</td>
+                            <td data-label="Valor" className={`text-right font-bold ${isIncome ? (isPending ? 'text-warning' : 'text-success') : 'text-danger'}`}>
                               {isIncome ? '+' : '-'} {fmtMoney(t.valor)}
                             </td>
-                            <td className="text-center">
+                            <td data-label="Excluir" className="text-center">
                               <button
                                 onClick={() => onDeleteTransaction(t.id)}
                                 className="text-text-muted hover:text-danger text-sm"
@@ -857,7 +857,7 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
           </div>
 
           <div className="table-wrap">
-            <table>
+            <table className="responsive-table">
               <thead>
                 <tr>
                   <th>Cliente</th>
@@ -878,8 +878,8 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
                     const isQuitting = quittingClientId === item.client.id;
                     return (
                       <tr key={item.client.id}>
-                        <td><strong>{item.client.nome}</strong></td>
-                        <td>
+                        <td data-label="Cliente"><strong>{item.client.nome}</strong></td>
+                        <td data-label="WhatsApp / Celular">
                           <div className="flex items-center gap-2">
                             <span>{item.client.celular}</span>
                             <button
@@ -891,8 +891,8 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
                             </button>
                           </div>
                         </td>
-                        <td className="text-warning font-extrabold text-sm">{fmtMoney(item.total)}</td>
-                        <td className="text-center">
+                        <td data-label="Valor Total Pendente" className="text-warning font-extrabold text-sm">{fmtMoney(item.total)}</td>
+                        <td data-label="Ações / Quitação" className="text-center">
                           {isQuitting ? (
                             <div className="flex items-center justify-center gap-1.5">
                               <select

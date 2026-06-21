@@ -54,9 +54,9 @@ const DailyMetricsBlock: React.FC<{
       {/* Card 1 */}
       <div className="bg-card border border-border rounded-lg p-5 flex items-center justify-between shadow-sm hover:border-border-hover transition-all">
         <div>
-          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Faturamento de Hoje</span>
+          <span className="text-xs font-bold text-text-muted uppercase tracking-wider block">Faturamento de Hoje</span>
           <h3 className="text-2xl font-extrabold text-success mt-1">{fmtMoney(faturamentoHojeReal)}</h3>
-          <span className="text-[10px] text-text-muted block mt-1">Efetivamente recebido (Exclui Fiado)</span>
+          <span className="text-xs text-text-muted block mt-1">Efetivamente recebido (Exclui Fiado)</span>
         </div>
         <span className="text-2xl">💰</span>
       </div>
@@ -64,11 +64,11 @@ const DailyMetricsBlock: React.FC<{
       {/* Card 2 */}
       <div className="bg-card border border-border rounded-lg p-5 flex items-center justify-between shadow-sm hover:border-border-hover transition-all">
         <div>
-          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Atendimentos de Hoje</span>
+          <span className="text-xs font-bold text-text-muted uppercase tracking-wider block">Atendimentos de Hoje</span>
           <h3 className="text-2xl font-extrabold text-primary mt-1">
             {completedToday} de {totalToday}
           </h3>
-          <span className="text-[10px] text-text-muted block mt-1">Procedimentos concluídos</span>
+          <span className="text-xs text-text-muted block mt-1">Procedimentos concluídos</span>
         </div>
         <span className="text-2xl">💅</span>
       </div>
@@ -76,11 +76,11 @@ const DailyMetricsBlock: React.FC<{
       {/* Card 3 */}
       <div className="bg-card border border-border rounded-lg p-5 flex items-center justify-between shadow-sm hover:border-border-hover transition-all">
         <div>
-          <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Dinheiro em Caixa (Mês)</span>
+          <span className="text-xs font-bold text-text-muted uppercase tracking-wider block">Dinheiro em Caixa (Mês)</span>
           <h3 className={`text-2xl font-extrabold mt-1 ${dinheiroEmCaixa >= 0 ? 'text-success' : 'text-danger'}`}>
             {fmtMoney(dinheiroEmCaixa)}
           </h3>
-          <span className="text-[10px] text-text-muted block mt-1">Entradas reais menos despesas</span>
+          <span className="text-xs text-text-muted block mt-1">Entradas reais menos despesas</span>
         </div>
         <span className="text-2xl">🏦</span>
       </div>
@@ -106,9 +106,9 @@ const FinancialMetricsBlock: React.FC<{
   return (
     <div className="bg-warning-lt/5 border border-warning/15 rounded-lg p-5 flex items-center justify-between shadow-sm hover:border-warning/30 transition-all">
       <div>
-        <span className="text-[10px] font-bold text-warning uppercase tracking-wider block">Total Pendente "Pagar Depois"</span>
+        <span className="text-xs font-bold text-warning uppercase tracking-wider block">Total Pendente "Pagar Depois"</span>
         <h3 className="text-2xl font-extrabold text-warning mt-1">{fmtMoney(totalFiadoAcumulado)}</h3>
-        <span className="text-[10px] text-text-muted block mt-0.5">Saldo pendente acumulado (Fiados a receber)</span>
+        <span className="text-xs text-text-muted block mt-0.5">Saldo pendente acumulado (Fiados a receber)</span>
       </div>
       <span className="text-2xl">💸</span>
     </div>
@@ -238,7 +238,7 @@ const ChartsBlock: React.FC<{
       <div className="bg-card border border-border rounded-lg p-5 shadow-sm flex flex-col justify-between">
         <div>
           <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">📈 1. Evolução Semanal</h4>
-          <p className="text-[10px] text-text-muted mb-4">Faturamento diário comparado com a semana anterior.</p>
+          <p className="text-xs text-text-muted mb-4">Faturamento diário comparado com a semana anterior.</p>
         </div>
         
         <div className="w-full">
@@ -287,7 +287,7 @@ const ChartsBlock: React.FC<{
                   x={x}
                   y={svgHeight - 4}
                   textAnchor="middle"
-                  fontSize="10"
+                  fontSize="12"
                   fill="var(--color-text-muted)"
                   fontWeight="bold"
                 >
@@ -298,7 +298,7 @@ const ChartsBlock: React.FC<{
           </svg>
         </div>
 
-        <div className="flex justify-center gap-4 mt-3 text-[10px] font-bold">
+        <div className="flex justify-center gap-4 mt-3 text-xs font-bold">
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-0.5 bg-primary inline-block"></span>
             <span className="text-text">Esta Semana</span>
@@ -314,7 +314,7 @@ const ChartsBlock: React.FC<{
       <div className="bg-card border border-border rounded-lg p-5 shadow-sm flex flex-col justify-between">
         <div>
           <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-3">🍩 2. Mix de Serviços</h4>
-          <p className="text-[10px] text-text-muted mb-4">Proporção dos tipos de procedimentos concluídos.</p>
+          <p className="text-xs text-text-muted mb-4">Proporção dos tipos de procedimentos concluídos.</p>
         </div>
 
         <div className="flex items-center gap-4">
@@ -344,12 +344,12 @@ const ChartsBlock: React.FC<{
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
               <span className="text-sm font-extrabold text-text">{completedApts.length}</span>
-              <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider">Feitos</span>
+              <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Feitos</span>
             </div>
           </div>
 
           {/* Legends list */}
-          <div className="flex-1 space-y-1.5 text-[10px] font-medium min-w-0">
+          <div className="flex-1 space-y-1.5 text-xs font-medium min-w-0">
             {mixData.length === 0 ? (
               <p className="text-text-muted italic text-center">Sem dados de serviços.</p>
             ) : (
@@ -466,19 +466,19 @@ const AlertsBlock: React.FC<{
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider border-b border-border pb-2">🚨 Alertas e Insights Urgentes</h3>
+      <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider border-b border-border pb-2">🚨 Alertas e Insights Urgentes</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Churn Alarm */}
         <div className="bg-danger-lt/5 border border-danger/20 p-4 rounded-lg flex flex-col justify-between gap-3 shadow-sm">
           <div>
-            <span className="text-[10px] font-bold text-danger uppercase tracking-wider block">Clientes Sumidas (Churn)</span>
+            <span className="text-xs font-bold text-danger uppercase tracking-wider block">Clientes Sumidas (Churn)</span>
             <h4 className="text-xl font-extrabold text-danger mt-1">{churnClients.length} em risco</h4>
-            <p className="text-[10px] text-text-muted mt-1">Clientes inativas ou sem atendimentos nos últimos 30 dias.</p>
+            <p className="text-xs text-text-muted mt-1">Clientes inativas ou sem atendimentos nos últimos 30 dias.</p>
           </div>
           <button
             onClick={handleRescueAll}
-            className="w-full py-1.5 bg-danger text-white text-[10px] font-bold rounded shadow hover:opacity-90 transition-all text-center"
+            className="w-full py-2 bg-danger text-white text-xs font-bold rounded shadow hover:opacity-90 transition-all text-center"
           >
             📱 Campanha de Resgate WhatsApp
           </button>
@@ -487,9 +487,9 @@ const AlertsBlock: React.FC<{
         {/* Birthday Alert */}
         <div className="bg-card border border-border p-4 rounded-lg flex flex-col justify-between gap-3 shadow-sm">
           <div>
-            <span className="text-[10px] font-bold text-primary uppercase tracking-wider block">Aniversariantes Agendadas Hoje</span>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider block">Aniversariantes Hoje</span>
             {todaysBirthdayClients.length === 0 ? (
-              <p className="text-xs text-text-muted mt-4 italic text-center">Nenhum aniversário de cliente agendado para hoje.</p>
+              <p className="text-xs text-text-muted mt-4 italic text-center">Nenhum aniversário de cliente agendado hoje.</p>
             ) : (
               <div className="space-y-1.5 mt-2 animate-pulse">
                 {todaysBirthdayClients.map(c => (
@@ -501,7 +501,7 @@ const AlertsBlock: React.FC<{
             )}
           </div>
           {todaysBirthdayClients.length > 0 && (
-            <div className="text-[9px] text-text-muted border-t border-border pt-2">
+            <div className="text-[11px] text-text-muted border-t border-border pt-2">
               Que tal oferecer um desconto de aniversário no fechamento? 🎁
             </div>
           )}
@@ -511,24 +511,24 @@ const AlertsBlock: React.FC<{
         {lowStockItems.length > 0 ? (
           <div className="bg-danger-lt/5 border border-danger/30 p-4 rounded-lg flex flex-col justify-between gap-2 shadow-sm">
             <div>
-              <span className="text-[10px] font-bold text-danger uppercase tracking-wider block">Estoque Crítico</span>
+              <span className="text-xs font-bold text-danger uppercase tracking-wider block">Estoque Crítico</span>
               <h4 className="text-xl font-extrabold text-danger mt-1">{lowStockItems.length} itens baixos</h4>
-              <p className="text-[10px] text-text-muted mt-1 truncate">
+              <p className="text-xs text-text-muted mt-1 truncate">
                 Repor: {lowStockItems.map(i => i.nome).join(', ')}
               </p>
             </div>
-            <div className="text-[9px] text-danger/80 font-bold uppercase tracking-wider">
+            <div className="text-[11px] text-danger/80 font-bold uppercase tracking-wider">
               ⚠️ Insumos necessitam de reposição urgente!
             </div>
           </div>
         ) : (
           <div className="bg-success-lt/5 border border-success/15 p-4 rounded-lg flex flex-col justify-between gap-2 shadow-sm">
             <div>
-              <span className="text-[10px] font-bold text-success uppercase tracking-wider block">Estoque Geral</span>
+              <span className="text-xs font-bold text-success uppercase tracking-wider block">Estoque Geral</span>
               <h4 className="text-xl font-extrabold text-success mt-1">OK</h4>
-              <p className="text-[10px] text-text-muted mt-1">Todos os insumos estão acima do estoque de alerta.</p>
+              <p className="text-xs text-text-muted mt-1">Todos os insumos estão acima do estoque de alerta.</p>
             </div>
-            <div className="text-[9px] text-success/80 font-bold uppercase tracking-wider">
+            <div className="text-[11px] text-success/80 font-bold uppercase tracking-wider">
               ✓ Nenhuma reposição pendente
             </div>
           </div>

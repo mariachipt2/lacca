@@ -77,6 +77,7 @@ export const App: React.FC = () => {
 
   // Tab State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'servicos' | 'estoque' | 'relatorios' | 'contas_pagar' | 'configuracoes'>('dashboard');
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [filterLowStock, setFilterLowStock] = useState(false);
 
   // Settings & Bills state
@@ -1140,7 +1141,7 @@ export const App: React.FC = () => {
 
               <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
                 <div className="table-wrap">
-                  <table>
+                  <table className="responsive-table">
                     <thead>
                       <tr>
                         <th>Nome</th>
@@ -1152,12 +1153,12 @@ export const App: React.FC = () => {
                     <tbody>
                       {services.map(s => (
                         <tr key={s.id}>
-                          <td><strong>{s.nome}</strong></td>
-                          <td className="text-success font-bold">
+                          <td data-label="Nome"><strong>{s.nome}</strong></td>
+                          <td data-label="Preço Sugerido" className="text-success font-bold">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.preco)}
                           </td>
-                          <td>⏱️ {s.duracao} minutos</td>
-                          <td className="text-center">
+                          <td data-label="Duração Estimada">⏱️ {s.duracao} minutos</td>
+                          <td data-label="Ações" className="text-center">
                             <div className="flex justify-center gap-2">
                               <button
                                 onClick={() => {
@@ -1311,7 +1312,7 @@ export const App: React.FC = () => {
 
                 <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
                   <div className="table-wrap">
-                    <table>
+                    <table className="responsive-table">
                       <thead>
                         <tr>
                           <th>Produto</th>
@@ -1333,21 +1334,21 @@ export const App: React.FC = () => {
                             const isLow = s.qtd <= s.min;
                             return (
                               <tr key={s.id}>
-                                <td><strong>{s.nome}</strong></td>
-                                <td className="text-center">
+                                <td data-label="Produto"><strong>{s.nome}</strong></td>
+                                <td data-label="Qtd Atual" className="text-center">
                                   <div className="flex items-center justify-center gap-2">
                                     <button onClick={() => adjustStockQuantity(s.id, -1)} className="btn btn-secondary btn-xs font-bold px-2 py-0 cursor-pointer">-</button>
                                     <span className="font-extrabold text-sm">{s.qtd}</span>
                                     <button onClick={() => adjustStockQuantity(s.id, 1)} className="btn btn-secondary btn-xs font-bold px-2 py-0 cursor-pointer">+</button>
                                   </div>
                                 </td>
-                                <td className="text-center text-text-muted">{s.min}</td>
-                                <td>
+                                <td data-label="Mínimo" className="text-center text-text-muted">{s.min}</td>
+                                <td data-label="Status">
                                   <span className={`badge ${isLow ? 'badge-danger' : 'badge-success'}`}>
                                     {isLow ? 'Repor' : 'OK'}
                                   </span>
                                 </td>
-                                <td className="text-center">
+                                <td data-label="Ações" className="text-center">
                                   <div className="flex justify-center gap-2">
                                     <button
                                       onClick={() => {
@@ -1437,62 +1438,141 @@ export const App: React.FC = () => {
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       <nav id="bottom-nav" className="md:hidden">
         <button
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => {
+            setActiveTab('dashboard');
+            setShowMoreMenu(false);
+          }}
           className={`bottom-nav-btn ${activeTab === 'dashboard' ? 'active' : ''}`}
         >
           <span className="bottom-icon">🏠</span>
           <span className="bottom-label">Início</span>
         </button>
         <button
-          onClick={() => setActiveTab('agenda')}
+          onClick={() => {
+            setActiveTab('agenda');
+            setShowMoreMenu(false);
+          }}
           className={`bottom-nav-btn ${activeTab === 'agenda' ? 'active' : ''}`}
         >
           <span className="bottom-icon">📅</span>
           <span className="bottom-label">Agenda</span>
         </button>
         <button
-          onClick={() => setActiveTab('clientes')}
+          onClick={() => {
+            setActiveTab('clientes');
+            setShowMoreMenu(false);
+          }}
           className={`bottom-nav-btn ${activeTab === 'clientes' ? 'active' : ''}`}
         >
           <span className="bottom-icon">👥</span>
           <span className="bottom-label">Clientes</span>
         </button>
         <button
-          onClick={() => setActiveTab('servicos')}
-          className={`bottom-nav-btn ${activeTab === 'servicos' ? 'active' : ''}`}
-        >
-          <span className="bottom-icon">💅</span>
-          <span className="bottom-label">Serviços</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('estoque')}
-          className={`bottom-nav-btn ${activeTab === 'estoque' ? 'active' : ''}`}
-        >
-          <span className="bottom-icon">📦</span>
-          <span className="bottom-label">Estoque</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('relatorios')}
+          onClick={() => {
+            setActiveTab('relatorios');
+            setShowMoreMenu(false);
+          }}
           className={`bottom-nav-btn ${activeTab === 'relatorios' ? 'active' : ''}`}
         >
           <span className="bottom-icon">📊</span>
           <span className="bottom-label">Relatórios</span>
         </button>
         <button
-          onClick={() => setActiveTab('contas_pagar')}
-          className={`bottom-nav-btn ${activeTab === 'contas_pagar' ? 'active' : ''}`}
+          onClick={() => setShowMoreMenu(!showMoreMenu)}
+          className={`bottom-nav-btn ${showMoreMenu ? 'active' : ''}`}
         >
-          <span className="bottom-icon">💸</span>
-          <span className="bottom-label">Contas</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('configuracoes')}
-          className={`bottom-nav-btn ${activeTab === 'configuracoes' ? 'active' : ''}`}
-        >
-          <span className="bottom-icon">⚙️</span>
-          <span className="bottom-label">Configs</span>
+          <span className="bottom-icon">☰</span>
+          <span className="bottom-label">Mais</span>
         </button>
       </nav>
+
+      {/* MOBILE "MAIS" DRAWER */}
+      {showMoreMenu && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/60 z-[1800] md:hidden animate-fade-in"
+            onClick={() => setShowMoreMenu(false)}
+          />
+          <div className="fixed bottom-16 left-0 right-0 bg-surface border-t border-border rounded-t-xl z-[1850] p-5 pb-8 md:hidden shadow-2xl animate-slide-up">
+            <div className="flex justify-between items-center pb-4 border-b border-border mb-4">
+              <h3 className="text-sm font-extrabold text-text uppercase tracking-wider">Mais Opções</h3>
+              <button 
+                onClick={() => setShowMoreMenu(false)} 
+                className="text-text-muted hover:text-text text-sm p-1"
+                aria-label="Fechar menu"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => {
+                  setActiveTab('servicos');
+                  setShowMoreMenu(false);
+                }}
+                className={`flex items-center gap-3 p-3 text-sm font-semibold rounded-md border border-border transition-all ${
+                  activeTab === 'servicos' ? 'bg-primary-lt border-primary text-primary' : 'bg-card text-text hover:bg-surface-active'
+                }`}
+              >
+                <span className="text-lg">💅</span> Serviços
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('estoque');
+                  setShowMoreMenu(false);
+                }}
+                className={`flex items-center gap-3 p-3 text-sm font-semibold rounded-md border border-border transition-all ${
+                  activeTab === 'estoque' ? 'bg-primary-lt border-primary text-primary' : 'bg-card text-text hover:bg-surface-active'
+                }`}
+              >
+                <span className="text-lg">📦</span> Estoque
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('contas_pagar');
+                  setShowMoreMenu(false);
+                }}
+                className={`flex items-center gap-3 p-3 text-sm font-semibold rounded-md border border-border transition-all ${
+                  activeTab === 'contas_pagar' ? 'bg-primary-lt border-primary text-primary' : 'bg-card text-text hover:bg-surface-active'
+                }`}
+              >
+                <span className="text-lg">💸</span> Contas
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('configuracoes');
+                  setShowMoreMenu(false);
+                }}
+                className={`flex items-center gap-3 p-3 text-sm font-semibold rounded-md border border-border transition-all ${
+                  activeTab === 'configuracoes' ? 'bg-primary-lt border-primary text-primary' : 'bg-card text-text hover:bg-surface-active'
+                }`}
+              >
+                <span className="text-lg">⚙️</span> Configs
+              </button>
+            </div>
+            <div className="pt-4 border-t border-border mt-4 flex gap-3">
+              <button
+                onClick={() => {
+                  toggleTheme();
+                  setShowMoreMenu(false);
+                }}
+                className="flex-1 py-2.5 bg-card hover:bg-active border border-border text-xs font-bold rounded text-text flex items-center justify-center gap-2 transition-all animate-none"
+              >
+                <span>{theme === 'dark' ? '☀️ Claro' : '🌙 Escuro'}</span>
+              </button>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setShowMoreMenu(false);
+                }}
+                className="flex-1 py-2.5 bg-danger/10 hover:bg-danger/20 border border-danger/25 text-xs font-bold rounded text-danger transition-all animate-none"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* SERVICE MODAL */}
       {showServiceModal && (

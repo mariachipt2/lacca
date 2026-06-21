@@ -148,7 +148,7 @@ export const ContasPagarView: React.FC<ContasPagarViewProps> = ({
       {/* TABLE */}
       <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
         <div className="table-wrap">
-          <table>
+          <table className="responsive-table">
             <thead>
               <tr>
                 <th>Descrição / Conta</th>
@@ -171,17 +171,17 @@ export const ContasPagarView: React.FC<ContasPagarViewProps> = ({
                   const isPaid = bill.status === 'Pago';
                   return (
                     <tr key={bill.id} className={isPaid ? 'opacity-70' : ''}>
-                      <td><strong>{bill.descricao}</strong></td>
-                      <td>{fmtDate(bill.dataVencimento)}</td>
-                      <td>
+                      <td data-label="Descrição / Conta"><strong>{bill.descricao}</strong></td>
+                      <td data-label="Vencimento">{fmtDate(bill.dataVencimento)}</td>
+                      <td data-label="Status">
                         <span className={`badge ${isPaid ? 'badge-success' : 'badge-danger'}`}>
                           {bill.status}
                         </span>
                       </td>
-                      <td className={`text-right font-bold ${isPaid ? 'text-text-muted' : 'text-danger'}`}>
+                      <td data-label="Valor" className={`text-right font-bold ${isPaid ? 'text-text-muted' : 'text-danger'}`}>
                         {fmtMoney(bill.valor)}
                       </td>
-                      <td className="text-center">
+                      <td data-label="Baixa" className="text-center">
                         <button
                           onClick={() => handleToggleStatus(bill)}
                           className={`px-3 py-1 text-xs font-semibold rounded transition-all border ${
@@ -193,7 +193,7 @@ export const ContasPagarView: React.FC<ContasPagarViewProps> = ({
                           {isPaid ? 'Estornar ↺' : 'Marcar como Paga ✓'}
                         </button>
                       </td>
-                      <td className="text-center">
+                      <td data-label="Ações" className="text-center">
                         <button
                           onClick={() => {
                             if (confirm('Deseja excluir esta conta?')) onDeleteBill(bill.id);

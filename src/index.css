@@ -269,3 +269,126 @@ th {
 tr:hover td {
   background: rgba(255, 255, 255, 0.02);
 }
+
+/* --- MOBILE & MOBILE-FIRST RESPONSIVENESS OVERRIDES --- */
+@media (max-width: 768px) {
+  /* Table to Card Stack Transformation */
+  .responsive-table, 
+  .responsive-table thead, 
+  .responsive-table tbody, 
+  .responsive-table tr, 
+  .responsive-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .responsive-table thead {
+    display: none; /* Hide header rows on mobile */
+  }
+
+  .responsive-table tr {
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .responsive-table tr:hover td {
+    background: transparent;
+  }
+
+  .responsive-table td {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.625rem 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    text-align: right;
+    font-size: 0.8125rem;
+    background: transparent !important;
+  }
+
+  .responsive-table td:last-child {
+    border-bottom: none;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: left;
+    margin-right: 1.5rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Specific styling adjustment for action flex containers */
+  .responsive-table td[data-label="Ações"] > div,
+  .responsive-table td[data-label="Ações / Quitação"] > div,
+  .responsive-table td[data-label="Baixa"] > button,
+  .responsive-table td[data-label="Excluir"] > button {
+    margin-left: auto;
+  }
+
+  /* Touch Target Enhancements (WCAG 44x44px minimum) */
+  .btn, 
+  button, 
+  [role="button"] {
+    min-height: 44px;
+    padding-top: 0.625rem;
+    padding-bottom: 0.625rem;
+  }
+
+  .btn-xs {
+    min-height: 38px;
+    min-width: 38px;
+    padding: 0.375rem 0.625rem;
+    font-size: 11px;
+  }
+  
+  /* Modal responsive heights & vertical scrolling in landscape mode */
+  .animate-modal-in {
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .animate-modal-in form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+  }
+}
+
+/* Animations for Mobile drawer */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out forwards;
+}
+
