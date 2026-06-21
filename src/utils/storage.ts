@@ -24,7 +24,9 @@ export async function lerConfiguracoesGestorDb(userId: string): Promise<Professi
           showFinancialMetrics: data.show_financial_metrics ?? true,
           showCharts: data.show_charts ?? true,
           showAlerts: data.show_alerts ?? true,
-        }
+        },
+        workStartHour: data.work_start_hour || '08:00',
+        workEndHour: data.work_end_hour || '20:00',
       };
     }
   } catch (e) {
@@ -42,13 +44,15 @@ export async function lerConfiguracoesGestorDb(userId: string): Promise<Professi
       showFinancialMetrics: true,
       showCharts: true,
       showAlerts: true,
-    }
+    },
+    workStartHour: '08:00',
+    workEndHour: '20:00',
   };
 }
 
 export async function salvarConfiguracoesGestorDb(settings: ProfessionalSettings, userId: string): Promise<void> {
   try {
-    const payload = {
+    const payload: any = {
       user_id: userId,
       nome_negocio: settings.nomeNegocio,
       nome_profissional: settings.nomeProfissional,
@@ -58,6 +62,8 @@ export async function salvarConfiguracoesGestorDb(settings: ProfessionalSettings
       show_financial_metrics: settings.dashboardPreferences.showFinancialMetrics,
       show_charts: settings.dashboardPreferences.showCharts,
       show_alerts: settings.dashboardPreferences.showAlerts,
+      work_start_hour: settings.workStartHour || '08:00',
+      work_end_hour: settings.workEndHour || '20:00',
     };
 
     const { error } = await supabase

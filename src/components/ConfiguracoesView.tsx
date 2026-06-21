@@ -14,6 +14,8 @@ export const ConfiguracoesView: React.FC<ConfiguracoesViewProps> = ({
   const [nomeNegocio, setNomeNegocio] = useState(settings.nomeNegocio);
   const [nomeProfissional, setNomeProfissional] = useState(settings.nomeProfissional);
   const [telefone, setTelefone] = useState(settings.telefone);
+  const [workStartHour, setWorkStartHour] = useState(settings.workStartHour || '08:00');
+  const [workEndHour, setWorkEndHour] = useState(settings.workEndHour || '20:00');
 
   // Dashboard Preferences state
   const [prefs, setPrefs] = useState({ ...settings.dashboardPreferences });
@@ -36,18 +38,26 @@ export const ConfiguracoesView: React.FC<ConfiguracoesViewProps> = ({
       nomeProfissional,
       telefone,
       customPaymentMethods: customMethods,
-      dashboardPreferences: updated
+      dashboardPreferences: updated,
+      workStartHour,
+      workEndHour
     });
   };
 
   const handleSaveInfo = (e: React.FormEvent) => {
     e.preventDefault();
+    if (workStartHour >= workEndHour) {
+      alert('O horário de início deve ser anterior ao horário de término do trabalho.');
+      return;
+    }
     onSaveSettings({
       nomeNegocio,
       nomeProfissional,
       telefone,
       customPaymentMethods: customMethods,
-      dashboardPreferences: prefs
+      dashboardPreferences: prefs,
+      workStartHour,
+      workEndHour
     });
     alert('Configurações salvas com sucesso! ✨');
   };
@@ -68,7 +78,9 @@ export const ConfiguracoesView: React.FC<ConfiguracoesViewProps> = ({
       nomeProfissional,
       telefone,
       customPaymentMethods: updated,
-      dashboardPreferences: prefs
+      dashboardPreferences: prefs,
+      workStartHour,
+      workEndHour
     });
   };
 
@@ -81,7 +93,9 @@ export const ConfiguracoesView: React.FC<ConfiguracoesViewProps> = ({
       nomeProfissional,
       telefone,
       customPaymentMethods: updated,
-      dashboardPreferences: prefs
+      dashboardPreferences: prefs,
+      workStartHour,
+      workEndHour
     });
   };
 
@@ -141,6 +155,30 @@ export const ConfiguracoesView: React.FC<ConfiguracoesViewProps> = ({
                 required
               />
               <span className="text-[10px] text-text-muted">Utilizado nos envios de relatórios e cobranças automáticas.</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider">Horário de Início do Trabalho</label>
+              <input
+                type="time"
+                className="w-full px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none focus:border-primary text-sm font-medium"
+                value={workStartHour}
+                onChange={(e) => setWorkStartHour(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider">Horário de Término do Trabalho</label>
+              <input
+                type="time"
+                className="w-full px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none focus:border-primary text-sm font-medium"
+                value={workEndHour}
+                onChange={(e) => setWorkEndHour(e.target.value)}
+                required
+              />
             </div>
           </div>
 

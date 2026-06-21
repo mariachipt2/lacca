@@ -91,7 +91,9 @@ export const App: React.FC = () => {
       showFinancialMetrics: true,
       showCharts: true,
       showAlerts: true,
-    }
+    },
+    workStartHour: '08:00',
+    workEndHour: '20:00'
   });
   const [bills, setBills] = useState<Bill[]>([]);
 
@@ -294,7 +296,9 @@ export const App: React.FC = () => {
           show_daily_metrics: s.dashboardPreferences?.showDailyMetrics ?? true,
           show_financial_metrics: s.dashboardPreferences?.showFinancialMetrics ?? true,
           show_charts: s.dashboardPreferences?.showCharts ?? true,
-          show_alerts: s.dashboardPreferences?.showAlerts ?? true
+          show_alerts: s.dashboardPreferences?.showAlerts ?? true,
+          work_start_hour: s.workStartHour || '08:00',
+          work_end_hour: s.workEndHour || '20:00'
         });
       }
 

@@ -69,5 +69,7 @@ export interface ProfessionalSettings {
     showCharts: boolean;
     showAlerts: boolean;
   };
+  workStartHour?: string; // e.g. "08:00"
+  workEndHour?: string;   // e.g. "20:00"
 }
 

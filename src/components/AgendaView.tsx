@@ -18,13 +18,6 @@ interface AgendaViewProps {
   onDisconnectGoogle: () => void;
 }
 
-const TIME_SLOTS = [
-  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-  '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
-  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
-  '17:00', '17:30', '18:00', '18:30', '19:00', '19:30'
-];
-
 // Helper to convert time HH:MM to minutes since midnight
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(':').map(Number);
@@ -37,6 +30,24 @@ function addMinutesToTime(time: string, minutes: number): string {
   const h = Math.floor(total / 60) % 24;
   const m = total % 60;
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+// Helper to generate dynamic 30-min time slots based on professional settings
+function generateTimeSlots(startHour: string = '08:00', endHour: string = '20:00'): string[] {
+  const slots: string[] = [];
+  const startMinutes = timeToMinutes(startHour);
+  const endMinutes = timeToMinutes(endHour);
+  
+  let current = startMinutes;
+  const limit = endMinutes > startMinutes ? endMinutes : startMinutes + 720;
+  
+  while (current < limit) {
+    const h = Math.floor(current / 60) % 24;
+    const m = current % 60;
+    slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+    current += 30;
+  }
+  return slots;
 }
 
 // Helper to get week dates (Monday to Sunday)
@@ -106,7 +117,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [googleFormEmail, setGoogleFormEmail] = useState('admin@example.com');
-  const [formTime, setFormTime] = useState('10:00');
+  const [formTime, setFormTime] = useState(() => settings.workStartHour || '08:00');
+
+  const timeSlots = generateTimeSlots(settings.workStartHour, settings.workEndHour);
   
   // Waitlist (Encaixe Rápido) LocalState
   const [waitlist, setWaitlist] = useState<{ id: string; nome: string; celular: string; obs: string; data: string }[]>(() => {
@@ -140,7 +153,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 
     for (let i = 0; i < slotsSpan; i++) {
       const slotTime = addMinutesToTime(apt.hora, i * 30);
-      if (TIME_SLOTS.includes(slotTime)) {
+      if (timeSlots.includes(slotTime)) {
         if (i === 0) {
           let label = '';
           if (isBlock) {
@@ -378,7 +391,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           </button>
           <button
             onClick={() => {
-              setFormTime('08:00');
+              setFormTime(settings.workStartHour || '08:00');
               setFormIsBlocked(false);
               setShowAddModal(true);
             }}
@@ -404,7 +417,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
             </div>
 
             <div className="divide-y divide-border">
-              {TIME_SLOTS.map(slot => {
+              {timeSlots.map(slot => {
                 const occupancy = slotOccupancyMap[slot];
                 
                 // Canceled/Spanned slots
