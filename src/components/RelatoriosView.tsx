@@ -585,29 +585,31 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
         </div>
 
         {/* EXPORT BUTTONS */}
-        <div className="flex flex-wrap gap-2 items-center bg-card p-1 border border-border rounded-md w-full lg:w-auto">
-          <span className="text-[10px] text-text-muted font-bold uppercase tracking-wider px-2">Exportar:</span>
-          <button
-            onClick={exportPDF}
-            className="px-3 py-1.5 bg-surface border border-border hover:border-border-hover text-text hover:text-primary text-xs font-bold rounded flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Visualizar para Impressão / Salvar PDF"
-          >
-            📄 PDF
-          </button>
-          <button
-            onClick={exportExcel}
-            className="px-3 py-1.5 bg-surface border border-border hover:border-border-hover text-text hover:text-primary text-xs font-bold rounded flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Baixar Planilha Excel/CSV"
-          >
-            📊 Excel
-          </button>
-          <button
-            onClick={exportWhatsApp}
-            className="px-3 py-1.5 bg-surface border border-border hover:border-border-hover text-text hover:text-success text-xs font-bold rounded flex items-center gap-1.5 transition-all cursor-pointer"
-            title="Enviar para o WhatsApp do Gestor"
-          >
-            📱 WhatsApp
-          </button>
+        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center bg-card p-2 border border-border rounded-md w-full lg:w-auto">
+          <span className="text-[11px] text-text-muted font-bold uppercase tracking-wider px-1 text-center sm:text-left">Exportar:</span>
+          <div className="grid grid-cols-3 gap-1.5 w-full sm:w-auto">
+            <button
+              onClick={exportPDF}
+              className="px-2 py-2 bg-surface border border-border hover:border-border-hover text-text hover:text-primary text-xs font-bold rounded flex items-center justify-center gap-1 transition-all cursor-pointer"
+              title="Visualizar para Impressão / Salvar PDF"
+            >
+              📄 PDF
+            </button>
+            <button
+              onClick={exportExcel}
+              className="px-2 py-2 bg-surface border border-border hover:border-border-hover text-text hover:text-primary text-xs font-bold rounded flex items-center justify-center gap-1 transition-all cursor-pointer"
+              title="Baixar Planilha Excel/CSV"
+            >
+              📊 Excel
+            </button>
+            <button
+              onClick={exportWhatsApp}
+              className="px-2 py-2 bg-surface border border-border hover:border-border-hover text-text hover:text-success text-xs font-bold rounded flex items-center justify-center gap-1 transition-all cursor-pointer"
+              title="Enviar para o WhatsApp do Gestor"
+            >
+              📱 WhatsApp
+            </button>
+          </div>
         </div>
       </div>
 
@@ -645,9 +647,9 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
           </div>
 
           {/* ACTIONS AND FILTERS */}
-          <div className="flex justify-between items-center gap-4 bg-card p-4 border border-border rounded-lg shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-card p-4 border border-border rounded-lg shadow-sm">
             <select
-              className="px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none text-sm cursor-pointer"
+              className="px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none text-sm cursor-pointer w-full sm:w-auto text-center"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
             >
@@ -662,7 +664,7 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
                 setExpenseDate(todayStr);
                 setShowAddModal(true);
               }}
-              className="btn btn-primary btn-sm font-bold bg-gradient-to-r from-primary to-primary-hover shadow-md text-white text-xs"
+              className="btn btn-primary btn-sm font-bold bg-gradient-to-r from-primary to-primary-hover shadow-md text-white text-xs w-full sm:w-auto py-2 px-3"
             >
               + Registrar Despesa
             </button>

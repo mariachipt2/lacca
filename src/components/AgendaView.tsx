@@ -287,82 +287,94 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
     <div className="space-y-6">
       
       {/* HEADER CONTROL BAR */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-card p-4 border border-border rounded-lg shadow-sm">
+      <div className="flex flex-col gap-4 bg-card p-4 border border-border rounded-lg shadow-sm">
         
-        {/* Date navigations */}
-        <div className="flex items-center gap-2">
-          <button onClick={() => changeDate(viewMode === 'semanal' ? -7 : -1)} className="btn btn-secondary btn-sm font-bold">
-            &larr; Anterior
-          </button>
-          <input
-            type="date"
-            className="px-3 py-1.5 bg-surface border border-border text-text rounded-md font-semibold text-sm outline-none cursor-pointer"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-          />
-          <button onClick={() => changeDate(viewMode === 'semanal' ? 7 : 1)} className="btn btn-secondary btn-sm font-bold">
-            Próximo &rarr;
-          </button>
+        {/* Row 1: Date Navigation */}
+        <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 w-full">
+          <div className="flex items-center gap-1.5 w-full sm:w-auto">
+            <button 
+              onClick={() => changeDate(viewMode === 'semanal' ? -7 : -1)} 
+              className="btn btn-secondary btn-sm font-bold flex-1 sm:flex-initial text-xs px-2.5 py-2"
+            >
+              &larr; Anterior
+            </button>
+            <input
+              type="date"
+              className="px-2.5 py-2 bg-surface border border-border text-text rounded-md font-semibold text-xs outline-none cursor-pointer flex-1 sm:flex-initial text-center min-w-0"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+            <button 
+              onClick={() => changeDate(viewMode === 'semanal' ? 7 : 1)} 
+              className="btn btn-secondary btn-sm font-bold flex-1 sm:flex-initial text-xs px-2.5 py-2"
+            >
+              Próximo &rarr;
+            </button>
+          </div>
+
           <button
             onClick={() => setSelectedDate(new Date().toISOString().slice(0, 10))}
-            className="btn btn-secondary btn-sm font-bold"
+            className="btn btn-secondary btn-sm font-bold w-full sm:w-auto mt-1 sm:mt-0 text-xs py-2"
           >
             Hoje
           </button>
         </div>
 
-        {/* View Mode Sub-tabs */}
-        <div className="flex bg-surface border border-border p-1 rounded-md">
-          <button
-            onClick={() => setViewMode('diario')}
-            className={`px-3 py-1 text-xs font-bold rounded transition-all ${
-              viewMode === 'diario' ? 'bg-active text-text shadow-sm' : 'text-text-muted hover:text-text'
-            }`}
-          >
-            Diário
-          </button>
-          <button
-            onClick={() => setViewMode('semanal')}
-            className={`px-3 py-1 text-xs font-bold rounded transition-all ${
-              viewMode === 'semanal' ? 'bg-active text-text shadow-sm' : 'text-text-muted hover:text-text'
-            }`}
-          >
-            Semanal
-          </button>
-          <button
-            onClick={() => setViewMode('mensal')}
-            className={`px-3 py-1 text-xs font-bold rounded transition-all ${
-              viewMode === 'mensal' ? 'bg-active text-text shadow-sm' : 'text-text-muted hover:text-text'
-            }`}
-          >
-            Mensal
-          </button>
+        {/* Row 2: View modes & Filters */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full border-t border-border/30 pt-3">
+          {/* View Mode Sub-tabs */}
+          <div className="flex bg-surface border border-border p-1 rounded-md w-full sm:w-auto">
+            <button
+              onClick={() => setViewMode('diario')}
+              className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-bold rounded transition-all ${
+                viewMode === 'diario' ? 'bg-active text-text shadow-sm' : 'text-text-muted hover:text-text'
+              }`}
+            >
+              Diário
+            </button>
+            <button
+              onClick={() => setViewMode('semanal')}
+              className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-bold rounded transition-all ${
+                viewMode === 'semanal' ? 'bg-active text-text shadow-sm' : 'text-text-muted hover:text-text'
+              }`}
+            >
+              Semanal
+            </button>
+            <button
+              onClick={() => setViewMode('mensal')}
+              className={`flex-1 sm:flex-initial text-center px-3 py-1.5 text-xs font-bold rounded transition-all ${
+                viewMode === 'mensal' ? 'bg-active text-text shadow-sm' : 'text-text-muted hover:text-text'
+              }`}
+            >
+              Mensal
+            </button>
+          </div>
+
+          {/* Hide free slots filter (only in daily view) */}
+          {viewMode === 'diario' && (
+            <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-text py-1">
+              <input
+                type="checkbox"
+                className="accent-primary w-4 h-4 cursor-pointer rounded"
+                checked={hideFreeSlots}
+                onChange={(e) => setHideFreeSlots(e.target.checked)}
+              />
+              <span>👁️ Ocultar Livres</span>
+            </label>
+          )}
         </div>
 
-        {/* Hide free slots filter (only in daily view) */}
-        {viewMode === 'diario' && (
-          <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-text">
-            <input
-              type="checkbox"
-              className="accent-primary w-4 h-4 cursor-pointer"
-              checked={hideFreeSlots}
-              onChange={(e) => setHideFreeSlots(e.target.checked)}
-            />
-            👁️ Ocultar Horários Livres
-          </label>
-        )}
-
-        {/* Fast buttons */}
-        <div className="flex gap-2">
+        {/* Row 3: Action Buttons */}
+        <div className="grid grid-cols-2 gap-2 w-full border-t border-border/30 pt-3">
           <button
             onClick={() => {
               setFormTime('12:00');
               setFormIsBlocked(true);
               setShowAddModal(true);
             }}
-            className="btn btn-secondary btn-sm font-bold"
+            className="btn btn-secondary btn-sm font-bold w-full text-xs py-2 px-2.5 truncate"
           >
-            🚫 Bloquear Horário
+            🚫 Bloquear
           </button>
           <button
             onClick={() => {
@@ -370,7 +382,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
               setFormIsBlocked(false);
               setShowAddModal(true);
             }}
-            className="btn btn-primary btn-sm font-bold bg-gradient-to-r from-primary to-primary-hover text-white shadow-sm"
+            className="btn btn-primary btn-sm font-bold bg-gradient-to-r from-primary to-primary-hover text-white shadow-sm w-full text-xs py-2 px-2.5 truncate"
           >
             + Novo Agendamento
           </button>
@@ -412,15 +424,15 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                     key={slot}
                     onDragOver={!occupancy ? (e) => e.preventDefault() : undefined}
                     onDrop={!occupancy ? (e) => handleDrop(e, slot) : undefined}
-                    className={`px-6 py-3 flex flex-col hover:bg-surface-active/30 transition-all gap-2 ${
+                    className={`px-3 sm:px-6 py-3 flex flex-col hover:bg-surface-active/30 transition-all gap-2 ${
                       !occupancy 
                         ? 'border border-transparent hover:border-dashed hover:border-primary/40 hover:bg-primary-lt/5' 
                         : ''
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-4 w-full">
+                    <div className="flex items-center justify-between gap-2 sm:gap-4 w-full">
                       {/* Time indicator */}
-                      <div className="text-sm font-extrabold text-primary min-w-[50px]">
+                      <div className="text-sm font-extrabold text-primary min-w-[45px] sm:min-w-[50px]">
                         {slot}
                       </div>
 
@@ -512,9 +524,10 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                         ) : (
                           <button
                             onClick={() => handleOpenAddModal(slot)}
-                            className="btn btn-secondary btn-xs text-xs font-semibold text-primary hover:text-primary-hover border border-border"
+                            className="btn btn-secondary btn-xs text-xs font-semibold text-primary hover:text-primary-hover border border-border flex items-center justify-center min-w-[34px] px-2"
                           >
-                            + Reservar
+                            <span className="hidden sm:inline">+ Reservar</span>
+                            <span className="sm:hidden text-sm font-bold">+</span>
                           </button>
                         )}
                       </div>
