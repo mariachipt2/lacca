@@ -552,32 +552,32 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
       
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         {/* FINANCE NAV TABS */}
-        <div className="flex flex-row flex-nowrap overflow-x-auto scrollbar-none gap-2 p-1 bg-card border border-border rounded-md w-full lg:max-w-lg">
+        <div className="flex flex-row gap-1.5 p-1 bg-card border border-border rounded-md w-full lg:max-w-lg">
           <button
             onClick={() => setActiveTab('caixa')}
-            className={`flex-1 py-2 text-xs font-bold rounded transition-all min-w-[120px] flex-shrink-0 ${
+            className={`flex-1 py-2 text-xs font-bold rounded transition-all text-center truncate ${
               activeTab === 'caixa' ? 'bg-active text-text shadow-sm' : 'text-text-muted hover:text-text'
             }`}
           >
-            💰 Fluxo de Caixa
+            💰 <span className="hidden sm:inline">Fluxo de </span>Caixa
           </button>
           <button
             onClick={() => setActiveTab('relatorios')}
-            className={`flex-1 py-2 text-xs font-bold rounded transition-all min-w-[150px] flex-shrink-0 ${
+            className={`flex-1 py-2 text-xs font-bold rounded transition-all text-center truncate ${
               activeTab === 'relatorios' ? 'bg-active text-text shadow-sm' : 'text-text-muted hover:text-text'
             }`}
           >
-            📊 Relatórios Avançados
+            📊 <span className="hidden sm:inline">Relatórios </span>Avançados
           </button>
           <button
             onClick={() => setActiveTab('debitos')}
-            className={`flex-1 py-2 text-xs font-bold rounded transition-all min-w-[140px] flex-shrink-0 ${
+            className={`flex-1 py-2 text-xs font-bold rounded transition-all text-center truncate relative ${
               activeTab === 'debitos' ? 'bg-active text-text shadow-sm' : 'text-text-muted hover:text-text'
             }`}
           >
-            💸 Débitos em Aberto
+            💸 Débitos<span className="hidden sm:inline"> em Aberto</span>
             {debitList.length > 0 && (
-              <span className="ml-1.5 px-1 bg-danger/20 text-danger text-[9px] uppercase font-bold rounded-sm inline-block">
+              <span className="ml-1 px-1 bg-danger/25 text-danger text-[9px] uppercase font-bold rounded-sm inline-block">
                 {debitList.length}
               </span>
             )}
@@ -737,21 +737,21 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
           {/* 1. REPORT FECHAMENTO (PERIOD) */}
           <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-text border-b border-border pb-3">📊 1. Relatório de Fechamento</h3>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-surface border border-border p-3 rounded">
-                <span className="text-[10px] text-text-muted font-bold block uppercase tracking-wider">Hoje</span>
-                <span className="text-[11px] font-bold text-success block mt-1">{fmtMoney(fatHojeRecebido)} rec.</span>
-                {fatHojePendente > 0 && <span className="text-[9px] font-bold text-warning block">{fmtMoney(fatHojePendente)} pend.</span>}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-center">
+              <div className="bg-surface border border-border p-3.5 rounded">
+                <span className="text-xs text-text-muted font-bold block uppercase tracking-wider">Hoje</span>
+                <span className="text-sm font-extrabold text-success block mt-1.5">{fmtMoney(fatHojeRecebido)} rec.</span>
+                {fatHojePendente > 0 && <span className="text-xs font-bold text-warning block mt-0.5">{fmtMoney(fatHojePendente)} pend.</span>}
               </div>
-              <div className="bg-surface border border-border p-3 rounded">
-                <span className="text-[10px] text-text-muted font-bold block uppercase tracking-wider">Últimos 7 dias</span>
-                <span className="text-[11px] font-bold text-success block mt-1">{fmtMoney(fatSemanaRecebido)} rec.</span>
-                {fatSemanaPendente > 0 && <span className="text-[9px] font-bold text-warning block">{fmtMoney(fatSemanaPendente)} pend.</span>}
+              <div className="bg-surface border border-border p-3.5 rounded">
+                <span className="text-xs text-text-muted font-bold block uppercase tracking-wider">Últimos 7 dias</span>
+                <span className="text-sm font-extrabold text-success block mt-1.5">{fmtMoney(fatSemanaRecebido)} rec.</span>
+                {fatSemanaPendente > 0 && <span className="text-xs font-bold text-warning block mt-0.5">{fmtMoney(fatSemanaPendente)} pend.</span>}
               </div>
-              <div className="bg-surface border border-border p-3 rounded">
-                <span className="text-[10px] text-text-muted font-bold block uppercase tracking-wider">Este Mês</span>
-                <span className="text-[11px] font-bold text-success block mt-1">{fmtMoney(fatMesRecebido)} rec.</span>
-                {fatMesPendente > 0 && <span className="text-[9px] font-bold text-warning block">{fmtMoney(fatMesPendente)} pend.</span>}
+              <div className="bg-surface border border-border p-3.5 rounded">
+                <span className="text-xs text-text-muted font-bold block uppercase tracking-wider">Este Mês</span>
+                <span className="text-sm font-extrabold text-success block mt-1.5">{fmtMoney(fatMesRecebido)} rec.</span>
+                {fatMesPendente > 0 && <span className="text-xs font-bold text-warning block mt-0.5">{fmtMoney(fatMesPendente)} pend.</span>}
               </div>
             </div>
           </div>
@@ -816,9 +816,9 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
 
           {/* 5. CLIENTES SUMIDAS (CHURN 30+ DAYS) */}
           <div className="bg-card border border-border rounded-lg p-5 shadow-sm space-y-3 md:col-span-2">
-            <h3 className="text-sm font-bold text-text border-b border-border pb-3 flex items-center justify-between">
+            <h3 className="text-sm font-bold text-text border-b border-border pb-3 flex flex-col sm:flex-row gap-1.5 justify-between items-start sm:items-center">
               <span>💔 5. Clientes Sumidas (Alerta de Churn)</span>
-              <span className="badge badge-danger">{churnClients.length} clientes em risco</span>
+              <span className="badge badge-danger text-[10px] sm:text-xs">{churnClients.length} clientes em risco</span>
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-1">
               {churnClients.length === 0 ? (
