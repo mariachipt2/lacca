@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Client, Service, Appointment, ProfessionalSettings } from '../types/database';
 import { InlineCompleteForm } from './InlineCompleteForm';
+import { validarDataAgendamento, validarPrecoServico, capitalizarNome } from '../utils/validations';
 
 interface AgendaViewProps {
   appointments: Appointment[];
@@ -25,10 +26,15 @@ function timeToMinutes(time: string): number {
 }
 
 // Helper to add minutes to a time string and return HH:MM
-function addMinutesToTime(time: string, minutes: number): string {
+export function addMinutesToTime(time: string, minutes: number): string {
   const total = timeToMinutes(time) + minutes;
-  const h = Math.floor(total / 60) % 24;
-  const m = total % 60;
+  return minutesToTime(total);
+}
+
+// Helper to convert minutes back to HH:MM
+function minutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
   return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
 }
 
@@ -139,42 +145,68 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
   const [formIsBlocked, setFormIsBlocked] = useState(false);
   const [formBlockLabel, setFormBlockLabel] = useState('Intervalo / Almoço');
   const [formBlockDuration, setFormBlockDuration] = useState(60);
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [priceError, setPriceError] = useState<string | null>(null);
 
   // Today's list (excluding canceled)
   const todayApts = appointments.filter(a => a.data === selectedDate && a.status !== 'Cancelado');
 
   // Build occupancy map for the daily grid
-  const slotOccupancyMap: { [slot: string]: { type: 'appointment' | 'block'; label: string; apt?: Appointment; slotsSpan: number } } = {};
+  const slotOccupancyMap: {
+    [slot: string]: Array<{
+      type: 'appointment' | 'block';
+      label: string;
+      apt?: Appointment;
+      slotsSpan: number;
+      offsetMinutes: number;
+    }>
+  } = {};
 
   todayApts.forEach(apt => {
     const isBlock = apt.clientId === 'BLOCKED_SLOT';
     const duration = isBlock ? (parseInt(apt.obs || '60') || 60) : (services.find(s => s.id === apt.serviceId)?.duracao || 30);
-    const slotsSpan = Math.ceil(duration / 30);
+    
+    // Find the slot this appointment falls into
+    const aptMinutes = timeToMinutes(apt.hora);
+    const startSlotMinutes = Math.floor(aptMinutes / 30) * 30;
+    const offsetMinutes = aptMinutes - startSlotMinutes;
+
+    const endMinutes = aptMinutes + duration;
+    
+    const slotsSpan = Math.ceil((endMinutes - startSlotMinutes) / 30);
 
     for (let i = 0; i < slotsSpan; i++) {
-      const slotTime = addMinutesToTime(apt.hora, i * 30);
+      const currentSlotMinutes = startSlotMinutes + i * 30;
+      const slotTime = minutesToTime(currentSlotMinutes);
+      
       if (timeSlots.includes(slotTime)) {
+        if (!slotOccupancyMap[slotTime]) {
+          slotOccupancyMap[slotTime] = [];
+        }
+        
         if (i === 0) {
           let label = '';
           if (isBlock) {
-            label = `⚠️ BLOQUEADO: ${apt.paymentMethod || 'Compromisso'}`;
+            label = `⚠️ BLOQUEADO: ${apt.paymentMethod || 'Compromisso'} (${apt.hora})`;
           } else {
             const client = clients.find(c => c.id === apt.clientId);
             const service = services.find(s => s.id === apt.serviceId);
-            label = `${client ? client.nome : 'Cliente'} - ${service ? service.nome : 'Unhas'}`;
+            label = `(${apt.hora}) ${client ? client.nome : 'Cliente'} - ${service ? service.nome : 'Unhas'}`;
           }
-          slotOccupancyMap[slotTime] = {
+          slotOccupancyMap[slotTime].push({
             type: isBlock ? 'block' : 'appointment',
             label,
             apt,
-            slotsSpan
-          };
+            slotsSpan,
+            offsetMinutes
+          });
         } else {
-          slotOccupancyMap[slotTime] = {
+          slotOccupancyMap[slotTime].push({
             type: isBlock ? 'block' : 'appointment',
             label: '↳ ocupado em atendimento/bloqueio',
-            slotsSpan: 0
-          };
+            slotsSpan: 0,
+            offsetMinutes: 0
+          });
         }
       }
     }
@@ -189,6 +221,8 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
   const handleOpenAddModal = (slot: string) => {
     setFormTime(slot);
     setFormIsBlocked(false);
+    setDateError(null);
+    setPriceError(null);
     setShowAddModal(true);
   };
 
@@ -200,6 +234,24 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate Date
+    const dateErr = validarDataAgendamento(selectedDate, false);
+    if (dateErr) {
+      setDateError(dateErr);
+      return;
+    }
+    setDateError(null);
+
+    // Validate Price (only if not blocked)
+    if (!formIsBlocked) {
+      const priceErr = validarPrecoServico(formPrice);
+      if (priceErr) {
+        setPriceError(priceErr);
+        return;
+      }
+    }
+    setPriceError(null);
 
     if (formIsBlocked) {
       onAddAppointment({
@@ -238,7 +290,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
     if (!newWaitName) return;
     const newItem = {
       id: 'wt_' + Date.now(),
-      nome: newWaitName,
+      nome: capitalizarNome(newWaitName),
       celular: newWaitPhone,
       obs: newWaitObs,
       data: selectedDate
@@ -383,6 +435,8 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
             onClick={() => {
               setFormTime('12:00');
               setFormIsBlocked(true);
+              setDateError(null);
+              setPriceError(null);
               setShowAddModal(true);
             }}
             className="btn btn-secondary btn-sm font-bold w-full text-xs py-2 px-2.5 truncate"
@@ -393,6 +447,8 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
             onClick={() => {
               setFormTime(settings.workStartHour || '08:00');
               setFormIsBlocked(false);
+              setDateError(null);
+              setPriceError(null);
               setShowAddModal(true);
             }}
             className="btn btn-primary btn-sm font-bold bg-gradient-to-r from-primary to-primary-hover text-white shadow-sm w-full text-xs py-2 px-2.5 truncate"
@@ -418,123 +474,151 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 
             <div className="divide-y divide-border">
               {timeSlots.map(slot => {
-                const occupancy = slotOccupancyMap[slot];
+                const occupancies = slotOccupancyMap[slot] || [];
                 
-                // Canceled/Spanned slots
-                if (occupancy && occupancy.slotsSpan === 0) {
+                // If this slot is fully covered by ongoing spanned appointments (all slotsSpan === 0)
+                const isOnlySpanned = occupancies.length > 0 && occupancies.every(occ => occ.slotsSpan === 0);
+                if (isOnlySpanned) {
                   return null;
                 }
 
-                // Hide empty slots filter
-                if (hideFreeSlots && !occupancy) {
+                // If hideFreeSlots is checked, hide empty slots
+                if (hideFreeSlots && occupancies.length === 0) {
                   return null;
                 }
-
-                const isBlockedSlot = occupancy?.type === 'block';
 
                 return (
                   <div
                     key={slot}
-                    onDragOver={!occupancy ? (e) => e.preventDefault() : undefined}
-                    onDrop={!occupancy ? (e) => handleDrop(e, slot) : undefined}
+                    onDragOver={occupancies.length === 0 ? (e) => e.preventDefault() : undefined}
+                    onDrop={occupancies.length === 0 ? (e) => handleDrop(e, slot) : undefined}
                     className={`px-3 sm:px-6 py-3 flex flex-col hover:bg-surface-active/30 transition-all gap-2 ${
-                      !occupancy 
+                      occupancies.length === 0 
                         ? 'border border-transparent hover:border-dashed hover:border-primary/40 hover:bg-primary-lt/5' 
                         : ''
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2 sm:gap-4 w-full">
+                    <div className="flex items-start justify-between gap-2 sm:gap-4 w-full">
                       {/* Time indicator */}
-                      <div className="text-sm font-extrabold text-primary min-w-[45px] sm:min-w-[50px]">
+                      <div className="text-sm font-extrabold text-primary min-w-[45px] sm:min-w-[50px] pt-1">
                         {slot}
                       </div>
 
-                      {/* Content / Draggable element */}
-                      <div className="flex-1 min-w-0">
-                        {occupancy ? (
-                          <div
-                            draggable={occupancy.type === 'appointment'}
-                            onDragStart={
-                              occupancy.type === 'appointment'
-                                        ? (e) => handleDragStart(e, occupancy.apt!.id)
+                      {/* Content / Draggable elements */}
+                      <div className="flex-1 flex flex-col gap-2 min-w-0">
+                        {occupancies.length > 0 ? (
+                          occupancies.map((occ, idx) => {
+                            if (occ.slotsSpan === 0) return null; // skip rendering secondary spans
+                            
+                            const isBlockedSlot = occ.type === 'block';
+                            const cardStyle = occ.offsetMinutes > 0 ? { marginTop: `${Math.round((occ.offsetMinutes / 30) * 45)}px` } : undefined;
+
+                            return (
+                              <div key={idx} style={cardStyle} className="flex flex-col gap-2 w-full">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-surface/50 p-2 border border-border rounded-md">
+                                  <div
+                                    draggable={occ.type === 'appointment'}
+                                    onDragStart={
+                                      occ.type === 'appointment'
+                                        ? (e) => handleDragStart(e, occ.apt!.id)
                                         : undefined
-                            }
-                            className={`rounded px-3 py-1.5 border text-xs min-h-[32px] flex items-center justify-between ${
-                              isBlockedSlot
-                                ? 'bg-warning-lt/5 border-warning/20 text-warning/80 font-semibold'
-                                : 'bg-primary-lt/20 border-primary/20 text-text font-bold cursor-grab active:cursor-grabbing hover:bg-primary-lt/30 transition-all'
-                            }`}
-                          >
-                            <div className="truncate">
-                              {isBlockedSlot ? '🚫 ' : '💅 '}
-                              {occupancy.label}
-                              {googleConnected && !isBlockedSlot && (
-                                <span className="ml-2 px-1 bg-green-500/10 text-green-500 border border-green-500/20 text-[9px] uppercase font-bold rounded-sm inline-block">
-                                  📅 Google Agenda
-                                </span>
-                              )}
-                              {occupancy.apt?.obs && (
-                                <span className="text-[10px] font-normal text-text-muted block mt-0.5 ml-4">
-                                  {occupancy.apt.obs}
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                                    }
+                                    className={`flex-1 rounded px-3 py-1.5 border text-xs min-h-[32px] flex items-center justify-between ${
+                                      isBlockedSlot
+                                        ? 'bg-warning-lt/5 border-warning/20 text-warning/80 font-semibold'
+                                        : 'bg-primary-lt/20 border-primary/20 text-text font-bold cursor-grab active:cursor-grabbing hover:bg-primary-lt/30 transition-all'
+                                    }`}
+                                  >
+                                    <div className="truncate">
+                                      {isBlockedSlot ? '🚫 ' : '💅 '}
+                                      {occ.label}
+                                      {googleConnected && !isBlockedSlot && (
+                                        <span className="ml-2 px-1 bg-green-500/10 text-green-500 border border-green-500/20 text-[9px] uppercase font-bold rounded-sm inline-block">
+                                          📅 Google Agenda
+                                        </span>
+                                      )}
+                                      {occ.apt?.obs && (
+                                        <span className="text-[10px] font-normal text-text-muted block mt-0.5 ml-4">
+                                          {occ.apt.obs}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Actions */}
+                                  <div className="flex items-center gap-1.5 flex-shrink-0 self-end sm:self-auto">
+                                    {isBlockedSlot ? (
+                                      <button
+                                        onClick={() => onDeleteAppointment(occ.apt!.id)}
+                                        className="btn btn-secondary btn-xs text-xs font-semibold"
+                                        title="Desbloquear Horário"
+                                      >
+                                        🔓 Desbloquear
+                                      </button>
+                                    ) : (
+                                      <>
+                                        {occ.apt?.status === 'Agendado' && (
+                                          <>
+                                            <button
+                                              onClick={() => handleSendReminder(occ.apt!.id)}
+                                              className="p-1 bg-surface border border-border hover:border-border-hover text-text-muted hover:text-text rounded-md text-xs"
+                                              title="Enviar Lembrar no WhatsApp"
+                                            >
+                                              📱 <span className="hidden sm:inline">Lembrar</span>
+                                            </button>
+                                            {completingAptId !== occ.apt!.id && (
+                                              <button
+                                                onClick={() => setCompletingAptId(occ.apt!.id)}
+                                                className="p-1 bg-success/15 border border-success/30 text-success hover:bg-success/20 rounded-md text-xs font-bold"
+                                                title="Concluir Atendimento"
+                                              >
+                                                ✓ <span className="hidden sm:inline">Concluir</span>
+                                              </button>
+                                            )}
+                                            <button
+                                              onClick={() => onCancelAppointment(occ.apt!.id)}
+                                              className="p-1 bg-danger/15 border border-danger/30 text-danger hover:bg-danger/20 rounded-md text-xs"
+                                              title="Cancelar Agendamento"
+                                            >
+                                              ✕ <span className="hidden sm:inline">Cancelar</span>
+                                            </button>
+                                          </>
+                                        )}
+                                        <button
+                                          onClick={() => onDeleteAppointment(occ.apt!.id)}
+                                          className="p-1 hover:bg-active rounded text-xs"
+                                          title="Excluir do Banco de Dados"
+                                        >
+                                          🗑️
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {occ.apt && !isBlockedSlot && completingAptId === occ.apt.id && (
+                                  <InlineCompleteForm
+                                    appointmentId={occ.apt.id}
+                                    valorTotal={occ.apt.valor}
+                                    customPaymentMethods={settings.customPaymentMethods}
+                                    onComplete={(id, splits) => {
+                                      onCompleteAppointment(id, splits);
+                                      setCompletingAptId(null);
+                                    }}
+                                    onCancel={() => setCompletingAptId(null)}
+                                  />
+                                )}
+                              </div>
+                            );
+                          })
                         ) : (
                           <span className="text-xs text-text-muted/50 italic">Livre</span>
                         )}
                       </div>
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        {occupancy ? (
-                          isBlockedSlot ? (
-                            <button
-                              onClick={() => onDeleteAppointment(occupancy.apt!.id)}
-                              className="btn btn-secondary btn-xs text-xs font-semibold"
-                              title="Desbloquear Horário"
-                            >
-                              🔓 Desbloquear
-                            </button>
-                          ) : (
-                            <>
-                              {occupancy.apt?.status === 'Agendado' && (
-                                <>
-                                  <button
-                                    onClick={() => handleSendReminder(occupancy.apt!.id)}
-                                    className="p-1 bg-surface border border-border hover:border-border-hover text-text-muted hover:text-text rounded-md text-xs"
-                                    title="Enviar Lembrar no WhatsApp"
-                                  >
-                                    📱 <span className="hidden sm:inline">Lembrar</span>
-                                  </button>
-                                  {completingAptId !== occupancy.apt!.id && (
-                                    <button
-                                      onClick={() => setCompletingAptId(occupancy.apt!.id)}
-                                      className="p-1 bg-success/15 border border-success/30 text-success hover:bg-success/20 rounded-md text-xs font-bold"
-                                      title="Concluir Atendimento"
-                                    >
-                                      ✓ <span className="hidden sm:inline">Concluir</span>
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => onCancelAppointment(occupancy.apt!.id)}
-                                    className="p-1 bg-danger/15 border border-danger/30 text-danger hover:bg-danger/20 rounded-md text-xs"
-                                    title="Cancelar Agendamento"
-                                  >
-                                    ✕ <span className="hidden sm:inline">Cancelar</span>
-                                  </button>
-                                </>
-                              )}
-                              <button
-                                onClick={() => onDeleteAppointment(occupancy.apt!.id)}
-                                className="p-1 hover:bg-active rounded text-xs"
-                                title="Excluir do Banco de Dados"
-                              >
-                                🗑️
-                              </button>
-                            </>
-                          )
-                        ) : (
+                      {/* If the slot has no occupancy, show the quick reserve button */}
+                      {occupancies.length === 0 && (
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
                           <button
                             onClick={() => handleOpenAddModal(slot)}
                             className="btn btn-secondary btn-xs text-xs font-semibold text-primary hover:text-primary-hover border border-border flex items-center justify-center min-w-[34px] px-2"
@@ -542,22 +626,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                             <span className="hidden sm:inline">+ Reservar</span>
                             <span className="sm:hidden text-sm font-bold">+</span>
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </div>
-
-                    {occupancy && !isBlockedSlot && completingAptId === occupancy.apt!.id && (
-                      <InlineCompleteForm
-                        appointmentId={occupancy.apt!.id}
-                        valorTotal={occupancy.apt!.valor}
-                        customPaymentMethods={settings.customPaymentMethods}
-                        onComplete={(id, splits) => {
-                          onCompleteAppointment(id, splits);
-                          setCompletingAptId(null);
-                        }}
-                        onCancel={() => setCompletingAptId(null)}
-                      />
-                    )}
                   </div>
                 );
               })}
@@ -960,11 +1031,23 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                     <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider">Data</label>
                     <input
                       type="date"
-                      className="w-full px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none focus:border-primary text-sm font-medium"
+                      min={new Date().toISOString().slice(0, 10)}
+                      max={(() => {
+                        const d = new Date();
+                        d.setFullYear(d.getFullYear() + 1);
+                        return d.toISOString().slice(0, 10);
+                      })()}
+                      className={`w-full px-4 py-2.5 bg-surface border text-text rounded-md outline-none focus:border-primary text-sm font-medium ${
+                        dateError ? 'border-danger' : 'border-border'
+                      }`}
                       value={selectedDate}
-                      onChange={(e) => setSelectedDate(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedDate(e.target.value);
+                        if (dateError) setDateError(null);
+                      }}
                       required
                     />
+                    {dateError && <span className="text-xs text-danger font-bold mt-1 block">{dateError}</span>}
                   </div>
                 </div>
 
@@ -1022,7 +1105,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                         required
                       >
                         <option value="">Selecione...</option>
-                        {services.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                        {services.filter(s => s.ativo !== false).map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
                       </select>
                     </div>
 
@@ -1031,11 +1114,17 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                       <input
                         type="number"
                         step="0.01"
-                        className="w-full px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none focus:border-primary text-sm font-medium"
+                        className={`w-full px-4 py-2.5 bg-surface border text-text rounded-md outline-none focus:border-primary text-sm font-medium ${
+                          priceError ? 'border-danger' : 'border-border'
+                        }`}
                         value={formPrice}
-                        onChange={(e) => setFormPrice(e.target.value)}
+                        onChange={(e) => {
+                          setFormPrice(e.target.value);
+                          if (priceError) setPriceError(null);
+                        }}
                         required
                       />
+                      {priceError && <span className="text-xs text-danger font-bold mt-1 block">{priceError}</span>}
                     </div>
 
                     <div className="space-y-1">

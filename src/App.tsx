@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Login } from './components/Login';
+import { validarPrecoServico } from './utils/validations';
 import { Dashboard } from './components/Dashboard';
 import { AgendaView } from './components/AgendaView';
 import { ClientesView } from './components/ClientesView';
@@ -109,7 +110,9 @@ export const App: React.FC = () => {
 
   // Modal forms states for inline lists
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [mostrarInativos, setMostrarInativos] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+  const [srvPriceError, setSrvPriceError] = useState<string | null>(null);
   const [srvName, setSrvName] = useState('');
   const [srvPrice, setSrvPrice] = useState('');
   const [srvDuration, setSrvDuration] = useState('60');
@@ -148,15 +151,16 @@ export const App: React.FC = () => {
       if (servicesErr) throw servicesErr;
       
       if ((servicesData || []).length === 0) {
-        const seedServices = DEFAULT_SERVICES.map(s => ({ ...s, user_id: userId }));
+        const seedServices = DEFAULT_SERVICES.map(s => ({ ...s, user_id: userId, ativo: true }));
         await supabase.from('services').insert(seedServices);
-        setServices(DEFAULT_SERVICES);
+        setServices(DEFAULT_SERVICES.map(s => ({ ...s, ativo: true })));
       } else {
         setServices((servicesData || []).map(s => ({
           id: s.id,
           nome: s.nome,
           preco: parseFloat(s.preco) || 0,
-          duracao: s.duracao
+          duracao: s.duracao,
+          ativo: s.ativo !== false
         })));
       }
 
@@ -749,6 +753,14 @@ export const App: React.FC = () => {
   const handleSaveService = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!srvName || !srvPrice) return;
+
+    const priceErr = validarPrecoServico(srvPrice);
+    if (priceErr) {
+      setSrvPriceError(priceErr);
+      return;
+    }
+    setSrvPriceError(null);
+
     const price = parseFloat(srvPrice) || 0;
     const dur = parseInt(srvDuration) || 60;
 
@@ -759,7 +771,7 @@ export const App: React.FC = () => {
       nextServices = nextServices.map(s => (s.id === editingService.id ? targetService : s));
       setEditingService(null);
     } else {
-      targetService = { id: 'srv_' + Date.now(), nome: srvName, preco: price, duracao: dur };
+      targetService = { id: 'srv_' + Date.now(), nome: srvName, preco: price, duracao: dur, ativo: true };
       nextServices.push(targetService);
     }
     setServices(nextServices);
@@ -772,7 +784,8 @@ export const App: React.FC = () => {
         id: targetService.id,
         nome: targetService.nome,
         preco: targetService.preco,
-        duracao: targetService.duracao
+        duracao: targetService.duracao,
+        ativo: targetService.ativo !== false
       });
     } catch (err) {
       console.error('Erro ao salvar serviço:', err);
@@ -780,7 +793,7 @@ export const App: React.FC = () => {
   };
 
   const handleDeleteService = async (id: string) => {
-    if (!confirm('Deseja excluir este serviço?')) return;
+    if (!confirm('Deseja excluir este serviço? O histórico de agendamentos antigos pode quebrar se o serviço for removido permanentemente. Prefira inativar.')) return;
     const nextServices = services.filter(s => s.id !== id);
     setServices(nextServices);
 
@@ -788,6 +801,17 @@ export const App: React.FC = () => {
       await supabase.from('services').delete().eq('id', id);
     } catch (err) {
       console.error('Erro ao excluir serviço:', err);
+    }
+  };
+
+  const handleToggleServiceActive = async (id: string, ativo: boolean) => {
+    const nextServices = services.map(s => s.id === id ? { ...s, ativo } : s);
+    setServices(nextServices);
+
+    try {
+      await supabase.from('services').update({ ativo }).eq('id', id);
+    } catch (err) {
+      console.error('Erro ao alternar status do serviço:', err);
     }
   };
 
@@ -1125,70 +1149,112 @@ export const App: React.FC = () => {
             />
           )}
 
-          {activeTab === 'servicos' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-base font-extrabold text-text">Catálogo de Serviços</h3>
-                <button
-                  onClick={() => {
-                    setEditingService(null);
-                    setSrvName('');
-                    setSrvPrice('');
-                    setSrvDuration('60');
-                    setShowServiceModal(true);
-                  }}
-                  className="btn btn-primary btn-sm font-bold bg-gradient-to-r from-primary to-primary-hover text-white text-xs cursor-pointer"
-                >
-                  + Novo Serviço
-                </button>
-              </div>
+          {activeTab === 'servicos' && (() => {
+            const displayedServices = services.filter(s => mostrarInativos || s.ativo !== false);
+            return (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                  <div className="flex items-center gap-4">
+                    <h3 className="text-base font-extrabold text-text">Catálogo de Serviços</h3>
+                    <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-bold text-text">
+                      <input
+                        type="checkbox"
+                        className="accent-primary w-4 h-4 cursor-pointer rounded"
+                        checked={mostrarInativos}
+                        onChange={(e) => setMostrarInativos(e.target.checked)}
+                      />
+                      <span>👁️ Mostrar inativos</span>
+                    </label>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setEditingService(null);
+                      setSrvName('');
+                      setSrvPrice('');
+                      setSrvPriceError(null);
+                      setSrvDuration('60');
+                      setShowServiceModal(true);
+                    }}
+                    className="btn btn-primary btn-sm font-bold bg-gradient-to-r from-primary to-primary-hover text-white text-xs cursor-pointer"
+                  >
+                    + Novo Serviço
+                  </button>
+                </div>
 
-              <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-                <div className="table-wrap">
-                  <table className="responsive-table">
-                    <thead>
-                      <tr>
-                        <th>Nome</th>
-                        <th>Preço Sugerido</th>
-                        <th>Duração Estimada</th>
-                        <th className="text-center" style={{ width: '120px' }}>Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {services.map(s => (
-                        <tr key={s.id}>
-                          <td data-label="Nome"><strong>{s.nome}</strong></td>
-                          <td data-label="Preço Sugerido" className="text-success font-bold">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.preco)}
-                          </td>
-                          <td data-label="Duração Estimada">⏱️ {s.duracao} minutos</td>
-                          <td data-label="Ações" className="text-center">
-                            <div className="flex justify-center gap-2">
-                              <button
-                                onClick={() => {
-                                  setEditingService(s);
-                                  setSrvName(s.nome);
-                                  setSrvPrice(s.preco.toString());
-                                  setSrvDuration(s.duracao.toString());
-                                  setShowServiceModal(true);
-                                }}
-                                className="btn btn-secondary btn-xs cursor-pointer"
-                              >
-                                ✏️
-                              </button>
-                              <button onClick={() => handleDeleteService(s.id)} className="btn btn-danger btn-xs cursor-pointer">
-                                🗑️
-                              </button>
-                            </div>
-                          </td>
+                <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
+                  <div className="table-wrap">
+                    <table className="responsive-table">
+                      <thead>
+                        <tr>
+                          <th>Nome</th>
+                          <th>Preço Sugerido</th>
+                          <th>Duração Estimada</th>
+                          <th>Status</th>
+                          <th className="text-center" style={{ width: '160px' }}>Ações</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {displayedServices.map(s => (
+                          <tr key={s.id} className={s.ativo === false ? 'opacity-55 bg-surface-active/10' : ''}>
+                            <td data-label="Nome">
+                              <strong>{s.nome}</strong>
+                              {s.ativo === false && <span className="ml-2 text-[10px] bg-danger/10 text-danger border border-danger/25 px-1.5 py-0.5 rounded font-bold uppercase">Inativo</span>}
+                            </td>
+                            <td data-label="Preço Sugerido" className="text-success font-bold">
+                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(s.preco)}
+                            </td>
+                            <td data-label="Duração Estimada">⏱️ {s.duracao} minutos</td>
+                            <td data-label="Status">
+                              <button
+                                onClick={() => handleToggleServiceActive(s.id, s.ativo === false)}
+                                className={`btn btn-xs font-bold px-2 py-0.5 rounded ${
+                                  s.ativo !== false 
+                                    ? 'bg-success/10 text-success border border-success/20 hover:bg-success/20' 
+                                    : 'bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20'
+                                }`}
+                              >
+                                {s.ativo !== false ? '🟢 Ativo' : '🔴 Inativo'}
+                              </button>
+                            </td>
+                            <td data-label="Ações" className="text-center">
+                              <div className="flex justify-center gap-2">
+                                <button
+                                  onClick={() => {
+                                    setEditingService(s);
+                                    setSrvName(s.nome);
+                                    setSrvPrice(s.preco.toString());
+                                    setSrvPriceError(null);
+                                    setSrvDuration(s.duracao.toString());
+                                    setShowServiceModal(true);
+                                  }}
+                                  className="btn btn-secondary btn-xs cursor-pointer"
+                                  title="Editar Serviço"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteService(s.id)}
+                                  className="btn btn-danger btn-xs cursor-pointer"
+                                  title="Excluir Permanentemente"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {displayedServices.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="text-center py-6 text-text-muted italic">Nenhum serviço encontrado.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {activeTab === 'estoque' && (() => {
             const displayedStock = filterLowStock ? stock.filter(s => s.qtd <= s.min) : stock;
@@ -1605,12 +1671,18 @@ export const App: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
-                      className="w-full px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none focus:border-primary text-sm font-medium"
+                      className={`w-full px-4 py-2.5 bg-surface border text-text rounded-md outline-none focus:border-primary text-sm font-medium ${
+                        srvPriceError ? 'border-danger' : 'border-border'
+                      }`}
                       placeholder="Ex: 140.00"
                       value={srvPrice}
-                      onChange={(e) => setSrvPrice(e.target.value)}
+                      onChange={(e) => {
+                        setSrvPrice(e.target.value);
+                        if (srvPriceError) setSrvPriceError(null);
+                      }}
                       required
                     />
+                    {srvPriceError && <span className="text-xs text-danger font-bold mt-1 block">{srvPriceError}</span>}
                   </div>
                   <div className="space-y-1">
                     <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider">Duração (Minutos)</label>

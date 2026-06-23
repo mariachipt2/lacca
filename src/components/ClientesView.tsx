@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Client, Appointment, Service } from '../types/database';
+import { validarTelefone, capitalizarNome, validarDataNascimento } from '../utils/validations';
 
 interface ClientesViewProps {
   clients: Client[];
@@ -30,10 +31,12 @@ export const ClientesView: React.FC<ClientesViewProps> = ({
   // Form states
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [birthDate, setBirthDate] = useState('');
   const [nailShape, setNailShape] = useState<Client['formatoUnha']>('Amendoada');
   const [allergies, setAllergies] = useState('Nenhuma');
   const [notes, setNotes] = useState('');
+  const [birthDateError, setBirthDateError] = useState<string | null>(null);
 
   const filtered = clients
     .filter(c => 
@@ -48,10 +51,12 @@ export const ClientesView: React.FC<ClientesViewProps> = ({
     setEditingId(null);
     setName('');
     setPhone('');
+    setPhoneError(null);
     setBirthDate('');
     setNailShape('Amendoada');
     setAllergies('Nenhuma');
     setNotes('');
+    setBirthDateError(null);
     setShowModal(true);
   };
 
@@ -59,17 +64,34 @@ export const ClientesView: React.FC<ClientesViewProps> = ({
     setEditingId(c.id);
     setName(c.nome);
     setPhone(c.celular);
+    setPhoneError(null);
     setBirthDate(c.dataNascimento || '');
     setNailShape(c.formatoUnha || 'Amendoada');
     setAllergies(c.alergias || 'Nenhuma');
     setNotes(c.obsTecnicas || '');
+    setBirthDateError(null);
     setShowModal(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const phoneErr = validarTelefone(phone);
+    if (phoneErr) {
+      setPhoneError(phoneErr);
+      return;
+    }
+    setPhoneError(null);
+
+    const birthErr = validarDataNascimento(birthDate);
+    if (birthErr) {
+      setBirthDateError(birthErr);
+      return;
+    }
+    setBirthDateError(null);
+
     const data = {
-      nome: name,
+      nome: capitalizarNome(name),
       celular: phone,
       dataNascimento: birthDate,
       formatoUnha: nailShape,
@@ -343,21 +365,35 @@ export const ClientesView: React.FC<ClientesViewProps> = ({
                     <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider">WhatsApp</label>
                     <input
                       type="tel"
-                      className="w-full px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none focus:border-primary text-sm font-medium"
+                      className={`w-full px-4 py-2.5 bg-surface border text-text rounded-md outline-none focus:border-primary text-sm font-medium ${
+                        phoneError ? 'border-danger' : 'border-border'
+                      }`}
                       placeholder="Ex: (11) 98888-8888"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      onChange={(e) => {
+                        setPhone(e.target.value);
+                        if (phoneError) setPhoneError(null);
+                      }}
                       required
                     />
+                    {phoneError && <span className="text-xs text-danger font-bold mt-1 block">{phoneError}</span>}
                   </div>
                   <div className="space-y-1">
                     <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider">Data de Nascimento</label>
                     <input
                       type="date"
-                      className="w-full px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none focus:border-primary text-sm font-medium"
+                      min="1900-01-01"
+                      max={new Date().toISOString().slice(0, 10)}
+                      className={`w-full px-4 py-2.5 bg-surface border text-text rounded-md outline-none focus:border-primary text-sm font-medium ${
+                        birthDateError ? 'border-danger' : 'border-border'
+                      }`}
                       value={birthDate}
-                      onChange={(e) => setBirthDate(e.target.value)}
+                      onChange={(e) => {
+                        setBirthDate(e.target.value);
+                        if (birthDateError) setBirthDateError(null);
+                      }}
                     />
+                    {birthDateError && <span className="text-xs text-danger font-bold mt-1 block">{birthDateError}</span>}
                   </div>
                 </div>
 

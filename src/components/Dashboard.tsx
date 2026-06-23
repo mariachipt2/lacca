@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Client, Service, Appointment, Transaction, ProfessionalSettings } from '../types/database';
 import { InlineCompleteForm } from './InlineCompleteForm';
+import { validarPrecoServico } from '../utils/validations';
 
 interface DashboardProps {
   userName: string;
@@ -561,6 +562,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [selectedService, setSelectedService] = useState('');
   const [time, setTime] = useState('10:00');
   const [price, setPrice] = useState('');
+  const [priceError, setPriceError] = useState<string | null>(null);
 
   const todayISO = new Date().toISOString().slice(0, 10);
   const todayApts = appointments.filter(a => a.data === todayISO && a.status !== 'Cancelado');
@@ -574,6 +576,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const handleAddAppointmentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedClient || !selectedService || !price) return;
+
+    const priceErr = validarPrecoServico(price);
+    if (priceErr) {
+      setPriceError(priceErr);
+      return;
+    }
+    setPriceError(null);
 
     onAddAppointment({
       clientId: selectedClient,
@@ -589,6 +598,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setSelectedService('');
     setTime('10:00');
     setPrice('');
+    setPriceError(null);
   };
 
   const handleSendReminder = (aptId: string) => {
@@ -627,7 +637,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </p>
         </div>
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => {
+            setPriceError(null);
+            setShowModal(true);
+          }}
           className="btn btn-primary btn-sm px-6 py-2.5 bg-gradient-to-r from-primary to-primary-hover font-bold text-white shadow-md hover:opacity-90 rounded-md text-xs whitespace-nowrap self-start sm:self-auto"
         >
           + Novo Agendamento
@@ -794,7 +807,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     required
                   >
                     <option value="">Selecione...</option>
-                    {services.map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                    {services.filter(s => s.ativo !== false).map(s => <option key={s.id} value={s.id}>{s.nome}</option>)}
                   </select>
                 </div>
 
@@ -814,11 +827,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <input
                       type="number"
                       step="0.01"
-                      className="w-full px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none focus:border-primary text-sm font-medium"
+                      className={`w-full px-4 py-2.5 bg-surface border text-text rounded-md outline-none focus:border-primary text-sm font-medium ${
+                        priceError ? 'border-danger' : 'border-border'
+                      }`}
                       value={price}
-                      onChange={(e) => setPrice(e.target.value)}
+                      onChange={(e) => {
+                        setPrice(e.target.value);
+                        if (priceError) setPriceError(null);
+                      }}
                       required
                     />
+                    {priceError && <span className="text-xs text-danger font-bold mt-1 block">{priceError}</span>}
                   </div>
                 </div>
               </div>

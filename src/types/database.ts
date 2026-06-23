@@ -23,6 +23,7 @@ export interface Service {
   nome: string;
   preco: number;
   duracao: number; // in minutes (multiples of 30)
+  ativo?: boolean;
 }
 
 export interface Appointment {
