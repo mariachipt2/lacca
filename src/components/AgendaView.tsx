@@ -18,6 +18,8 @@ interface AgendaViewProps {
   googleEmail: string;
   onConnectGoogle: (email: string) => void;
   onDisconnectGoogle: () => void;
+  waitlist: { id: string; nome: string; celular: string; obs: string; data: string }[];
+  setWaitlist: React.Dispatch<React.SetStateAction<{ id: string; nome: string; celular: string; obs: string; data: string }[]>>;
 }
 
 // Helper to convert time HH:MM to minutes since midnight
@@ -116,7 +118,9 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
   googleConnected,
   googleEmail,
   onConnectGoogle,
-  onDisconnectGoogle
+  onDisconnectGoogle,
+  waitlist,
+  setWaitlist
 }) => {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [viewMode, setViewMode] = useState<'diario' | 'semanal' | 'mensal'>('diario');
@@ -129,12 +133,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
 
   const timeSlots = generateTimeSlots(settings.workStartHour, settings.workEndHour);
   
-  // Waitlist (Encaixe Rápido) LocalState
-  const [waitlist, setWaitlist] = useState<{ id: string; nome: string; celular: string; obs: string; data: string }[]>(() => {
-    return [
-      { id: 'wt_1', nome: 'Renata Frota', celular: '(11) 95555-4444', obs: 'Manutenção fim da tarde', data: new Date().toISOString().slice(0, 10) }
-    ];
-  });
+
   const [newWaitName, setNewWaitName] = useState('');
   const [newWaitPhone, setNewWaitPhone] = useState('');
   const [newWaitObs, setNewWaitObs] = useState('');

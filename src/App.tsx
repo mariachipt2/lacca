@@ -75,7 +75,7 @@ const mapTransactionFromDb = (db: any): Transaction => ({
 export const App: React.FC = () => {
   // Authentication states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<{ email: string; role: 'admin' | 'client'; name: string } | null>(null);
+  const [user, setUser] = useState<{ id: string; email: string; role: 'admin' | 'client'; name: string } | null>(null);
 
   // Tab State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'servicos' | 'estoque' | 'relatorios' | 'contas_pagar' | 'configuracoes' | 'logs'>('dashboard');
@@ -109,6 +109,25 @@ export const App: React.FC = () => {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
+
+  // Waitlist (Encaixe Rápido) State lifted to App.tsx
+  const [waitlist, setWaitlist] = useState<{ id: string; nome: string; celular: string; obs: string; data: string }[]>(() => {
+    const saved = localStorage.getItem('nail_waitlist');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Erro ao parsear waitlist do localStorage:', e);
+      }
+    }
+    return [
+      { id: 'wt_1', nome: 'Renata Frota', celular: '(11) 95555-4444', obs: 'Manutenção fim da tarde', data: new Date().toISOString().slice(0, 10) }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('nail_waitlist', JSON.stringify(waitlist));
+  }, [waitlist]);
 
   // Modal forms states for inline lists
   const [showServiceModal, setShowServiceModal] = useState(false);
@@ -343,7 +362,7 @@ export const App: React.FC = () => {
         const email = session.user.email || '';
         const role = session.user.user_metadata?.role || 'admin';
         const name = session.user.user_metadata?.name || email.split('@')[0];
-        setUser({ email, role, name });
+        setUser({ id: session.user.id, email, role, name });
         loadAllUserData(session.user.id);
       }
     });
@@ -354,7 +373,7 @@ export const App: React.FC = () => {
         const email = session.user.email || '';
         const role = session.user.user_metadata?.role || 'admin';
         const name = session.user.user_metadata?.name || email.split('@')[0];
-        setUser({ email, role, name });
+        setUser({ id: session.user.id, email, role, name });
         await loadAllUserData(session.user.id);
       } else {
         setIsLoggedIn(false);
@@ -442,7 +461,8 @@ export const App: React.FC = () => {
         status: newApt.status,
         payment_method: newApt.paymentMethod || null,
         obs: newApt.obs || null,
-        created_at: newApt.createdAt
+        created_at: newApt.createdAt,
+        user_id: user?.id
       });
 
       if (newTxn) {
@@ -454,7 +474,8 @@ export const App: React.FC = () => {
           valor: newTxn.valor,
           appointment_id: newTxn.appointmentId,
           payment_method: newTxn.paymentMethod || null,
-          created_at: newTxn.createdAt
+          created_at: newTxn.createdAt,
+          user_id: user?.id
         });
       }
 
@@ -523,7 +544,8 @@ export const App: React.FC = () => {
           valor: newTxn.valor,
           appointment_id: id,
           payment_method: newTxn.paymentMethod || null,
-          created_at: newTxn.createdAt
+          created_at: newTxn.createdAt,
+          user_id: user?.id
         });
       });
     }
@@ -754,7 +776,8 @@ export const App: React.FC = () => {
         formato_unha: newClient.formatoUnha || null,
         alergias: newClient.alergias || null,
         obs_tecnicas: newClient.obsTecnicas || null,
-        fotos_unhas: newClient.fotosUnhas
+        fotos_unhas: newClient.fotosUnhas,
+        user_id: user?.id
       });
       registrarLog('Criação', 'Cliente', newClient.id, `Cliente ${newClient.nome} cadastrado(a)`, null, newClient);
     } catch (err) {
@@ -859,7 +882,8 @@ export const App: React.FC = () => {
         valor: newTxn.valor,
         appointment_id: newTxn.appointmentId || null,
         payment_method: newTxn.paymentMethod || null,
-        created_at: newTxn.createdAt
+        created_at: newTxn.createdAt,
+        user_id: user?.id
       });
       registrarLog('Criação', 'Financeiro', newTxn.id, `Transação manual adicionada: ${newTxn.tipo} - ${newTxn.descricao} (R$ ${newTxn.valor.toFixed(2)})`, null, newTxn);
     } catch (err) {
@@ -921,7 +945,8 @@ export const App: React.FC = () => {
         nome: targetService.nome,
         preco: targetService.preco,
         duracao: targetService.duracao,
-        ativo: targetService.ativo !== false
+        ativo: targetService.ativo !== false,
+        user_id: user?.id
       });
       if (isEdit && oldService) {
         registrarLog('Edição', 'Serviço', targetService.id, `Serviço '${targetService.nome}' editado (Preço: R$ ${targetService.preco.toFixed(2)}, Duração: ${targetService.duracao} min)`, oldService, targetService);
@@ -993,7 +1018,8 @@ export const App: React.FC = () => {
         id: targetItem.id,
         nome: targetItem.nome,
         qtd: targetItem.qtd,
-        min: targetItem.min
+        min: targetItem.min,
+        user_id: user?.id
       });
       if (isEdit && oldItem) {
         registrarLog('Edição', 'Estoque', targetItem.id, `Item '${targetItem.nome}' editado no estoque (Qtd: ${targetItem.qtd}, Min: ${targetItem.min})`, oldItem, targetItem);
@@ -1309,6 +1335,8 @@ export const App: React.FC = () => {
               googleEmail={googleEmail}
               onConnectGoogle={handleConnectGoogle}
               onDisconnectGoogle={handleDisconnectGoogle}
+              waitlist={waitlist}
+              setWaitlist={setWaitlist}
             />
           )}
 
