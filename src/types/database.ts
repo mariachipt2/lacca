@@ -74,3 +74,15 @@ export interface ProfessionalSettings {
   workEndHour?: string;   // e.g. "20:00"
 }
 
+export interface AuditLog {
+  id: string;
+  userEmail: string;
+  acao: string;          // 'Criação', 'Edição', 'Exclusão'
+  entidade: string;      // 'Cliente', 'Agendamento', 'Serviço', 'Financeiro', 'Estoque', 'Contas'
+  registroId: string;
+  detalhes: string;
+  valorAnterior?: any;
+  valorNovo?: any;
+  createdAt: string;
+}
+

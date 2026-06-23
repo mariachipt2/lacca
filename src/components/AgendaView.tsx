@@ -13,6 +13,7 @@ interface AgendaViewProps {
   onCompleteAppointment: (id: string, splits: { method: string; value: number }[]) => void;
   onDeleteAppointment: (id: string) => void;
   onUpdateAppointmentTime: (id: string, hora: string) => void;
+  onAddClient?: (client: Omit<Client, 'id' | 'createdAt'>) => Promise<Client>;
   googleConnected: boolean;
   googleEmail: string;
   onConnectGoogle: (email: string) => void;
@@ -111,6 +112,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
   onCompleteAppointment,
   onDeleteAppointment,
   onUpdateAppointmentTime,
+  onAddClient,
   googleConnected,
   googleEmail,
   onConnectGoogle,
@@ -232,7 +234,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
     if (srv) setFormPrice(srv.preco.toString());
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate Date
@@ -266,8 +268,30 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
       });
     } else {
       if (!formClientId || !formServiceId || !formPrice) return;
+      
+      let targetClientId = formClientId;
+      if (formClientId.startsWith('wt_')) {
+        const waitItem = waitlist.find(w => w.id === formClientId);
+        if (waitItem && onAddClient) {
+          try {
+            const newClient = await onAddClient({
+              nome: waitItem.nome,
+              celular: waitItem.celular,
+              obsTecnicas: waitItem.obs || ''
+            });
+            targetClientId = newClient.id;
+            
+            // Remove from waitlist
+            setWaitlist(prev => prev.filter(w => w.id !== waitItem.id));
+          } catch (err) {
+            console.error('Erro ao converter cliente da lista de espera:', err);
+            return;
+          }
+        }
+      }
+
       onAddAppointment({
-        clientId: formClientId,
+        clientId: targetClientId,
         serviceId: formServiceId,
         data: selectedDate,
         hora: formTime,
@@ -332,10 +356,10 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
     const service = services.find(s => s.id === apt.serviceId);
     if (!client) return;
 
-    const bizSuffix = settings.nomeNegocio ? ` &mdash; *${settings.nomeNegocio}*` : '';
-    const profPrefix = settings.nomeProfissional ? `Olá, aqui é a *${settings.nomeProfissional}*! ✨\n` : 'Olá! ✨\n';
+    const bizSuffix = settings.nomeNegocio ? ` \u2014 *${settings.nomeNegocio}*` : '';
+    const profPrefix = settings.nomeProfissional ? `Olá, aqui é a *${settings.nomeProfissional}*! \u{2728}\n` : 'Olá! \u{2728}\n';
 
-    const text = `${profPrefix}Passando para confirmar seu horário hoje às *${apt.hora}* para o serviço de *${service ? service.nome : 'unhas'}*.\nConfirma?${bizSuffix} 💅`;
+    const text = `${profPrefix}Passando para confirmar seu horário hoje às *${apt.hora}* para o serviço de *${service ? service.nome : 'unhas'}*.\nConfirma?${bizSuffix} \u{1F485}`;
     const cleanPhone = client.celular.replace(/\D/g, '');
     window.open(`https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -1086,13 +1110,31 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                     <div className="space-y-1">
                       <label className="block text-[11px] font-bold text-text-muted uppercase tracking-wider">Cliente</label>
                       <select
-                        className="w-full px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none focus:border-primary text-sm font-medium"
+                        className="w-full px-4 py-2.5 bg-surface border border-border text-text rounded-md outline-none focus:border-primary text-sm font-medium cursor-pointer"
                         value={formClientId}
-                        onChange={(e) => setFormClientId(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setFormClientId(val);
+                          if (val.startsWith('wt_')) {
+                            const waitItem = waitlist.find(w => w.id === val);
+                            if (waitItem && waitItem.obs) {
+                              setFormObs(waitItem.obs);
+                            }
+                          }
+                        }}
                         required
                       >
                         <option value="">Selecione...</option>
-                        {clients.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                        <optgroup label="Clientes Cadastrados">
+                          {clients.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                        </optgroup>
+                        {waitlist.length > 0 && (
+                          <optgroup label="Fila de Espera">
+                            {waitlist.map(w => (
+                              <option key={w.id} value={w.id}>{w.nome} (Fila &rarr; {w.celular})</option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                     </div>
 

@@ -142,7 +142,7 @@ export const ClientesView: React.FC<ClientesViewProps> = ({
   });
 
   const sendBirthdayGreetings = (c: Client) => {
-    const text = `Parabéns, *${c.nome}*! 🥳🎉\nDesejamos a você um dia incrível e cheio de luz! Para comemorar seu aniversário, temos um mimo especial de 10% de desconto no seu próximo procedimento conosco neste mês. Vamos agendar seu horário? 💅💖`;
+    const text = `Parabéns, *${c.nome}*! \u{1F973}\u{1F389}\nDesejamos a você um dia incrível e cheio de luz! Para comemorar seu aniversário, temos um mimo especial de 10% de desconto no seu próximo procedimento conosco neste mês. Vamos agendar seu horário? \u{1F485}\u{1F496}`;
     const cleanPhone = c.celular.replace(/\D/g, '');
     window.open(`https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(text)}`, '_blank');
   };

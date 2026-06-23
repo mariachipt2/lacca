@@ -159,9 +159,9 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
     .sort((a, b) => b.days - a.days);
 
   const handleRescueClient = (c: Client) => {
-    const bizSuffix = settings.nomeNegocio ? ` &mdash; *${settings.nomeNegocio}*` : '';
-    const profPrefix = settings.nomeProfissional ? `Olá, aqui é a *${settings.nomeProfissional}*! Saudades de você e das suas unhas. ✨💅\n` : `Olá, *${c.nome}*! Saudades de você e das suas unhas. ✨💅\n`;
-    const text = `${profPrefix}Passando para saber se gostaria de agendar uma manutenção ou alongamento para os próximos dias? Vamos deixar suas unhas lindas e brilhantes novamente! Vamos marcar?${bizSuffix} 🥰`;
+    const bizSuffix = settings.nomeNegocio ? ` \u2014 *${settings.nomeNegocio}*` : '';
+    const profPrefix = settings.nomeProfissional ? `Olá, aqui é a *${settings.nomeProfissional}*! Saudades de você e das suas unhas. \u{2728}\u{1F485}\n` : `Olá, *${c.nome}*! Saudades de você e das suas unhas. \u{2728}\u{1F485}\n`;
+    const text = `${profPrefix}Passando para saber se gostaria de agendar uma manutenção ou alongamento para os próximos dias? Vamos deixar suas unhas lindas e brilhantes novamente! Vamos marcar?${bizSuffix} \u{1F970}`;
     const cleanPhone = c.celular.replace(/\D/g, '');
     window.open(`https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -189,9 +189,9 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
 
   // Send WhatsApp debit reminder
   const handleSendDebitMessage = (c: Client, value: number) => {
-    const bizSuffix = settings.nomeNegocio ? ` &mdash; *${settings.nomeNegocio}*` : '';
-    const profPrefix = settings.nomeProfissional ? `Olá, aqui é a *${settings.nomeProfissional}*! ✨\n` : `Olá, *${c.nome}*! ✨\n`;
-    const text = `${profPrefix}Passando para lembrar que você possui um valor em aberto pendente de *${fmtMoney(value)}* referente aos seus atendimentos.\nCaso queira efetuar o pagamento por Pix ou outro método, me avise para eu poder dar baixa na sua ficha. Agradeço!${bizSuffix} 🥰💅`;
+    const bizSuffix = settings.nomeNegocio ? ` \u2014 *${settings.nomeNegocio}*` : '';
+    const profPrefix = settings.nomeProfissional ? `Olá, aqui é a *${settings.nomeProfissional}*! \u{2728}\n` : `Olá, *${c.nome}*! \u{2728}\n`;
+    const text = `${profPrefix}Passando para lembrar que você possui um valor em aberto pendente de *${fmtMoney(value)}* referente aos seus atendimentos.\nCaso queira efetuar o pagamento por Pix ou outro método, me avise para eu poder dar baixa na sua ficha. Agradeço!${bizSuffix} \u{1F970}\u{1F485}`;
     const cleanPhone = c.celular.replace(/\D/g, '');
     window.open(`https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -491,23 +491,23 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
     if (activeTab === 'caixa') {
       const [y, mo] = selectedMonth.split('-');
       const monthName = new Date(+y, +mo - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-      text += `📅 *Fluxo de Caixa (${monthName.toUpperCase()})*\n`;
+      text += `\u{1F4C5} *Fluxo de Caixa (${monthName.toUpperCase()})*\n`;
       text += `==================================\n`;
-      text += `💰 *Recebido:* ${fmtMoney(totalRecebido)}\n`;
-      text += `⏳ *Pendente:* ${fmtMoney(totalPendente)}\n`;
-      text += `❌ *Despesas:* ${fmtMoney(totalDespesas)}\n`;
-      text += `📈 *Saldo Líquido Real:* ${fmtMoney(saldoLiquidoReal)}\n\n`;
+      text += `\u{1F4B0} *Recebido:* ${fmtMoney(totalRecebido)}\n`;
+      text += `\u{23F3} *Pendente:* ${fmtMoney(totalPendente)}\n`;
+      text += `\u{274C} *Despesas:* ${fmtMoney(totalDespesas)}\n`;
+      text += `\u{1F4C8} *Saldo Líquido Real:* ${fmtMoney(saldoLiquidoReal)}\n\n`;
       text += `*Últimas 5 Movimentações:*\n`;
       
       filteredTransactions
         .sort((a,b) => b.data.localeCompare(a.data))
         .slice(0, 5)
         .forEach(t => {
-          const sign = t.tipo === 'Receita' ? '🟢' : '🔴';
+          const sign = t.tipo === 'Receita' ? '\u{1F7E2}' : '\u{1F534}';
           text += `${sign} *${fmtDate(t.data)}* - ${t.descricao}: _${fmtMoney(t.valor)}_\n`;
         });
     } else if (activeTab === 'relatorios') {
-      text += `📊 *Relatórios Avançados*\n`;
+      text += `\u{1F4CA} *Relatórios Avançados*\n`;
       text += `==================================\n`;
       text += `*1. Resumo de Faturamento:*\n`;
       text += `• Hoje: Ganhos: ${fmtMoney(fatHojeRecebido)} (Pend: ${fmtMoney(fatHojePendente)})\n`;
@@ -525,13 +525,13 @@ export const RelatoriosView: React.FC<RelatoriosViewProps> = ({
         text += `• #${idx+1} ${c.nome} - _${fmtMoney(c.total)}_\n`;
       });
       text += `\n`;
-
-      text += `💔 *Clientes Sumidas (>30 dias):* ${churnClients.length} em risco.`;
+ 
+      text += `\u{1F494} *Clientes Sumidas (>30 dias):* ${churnClients.length} em risco.`;
     } else if (activeTab === 'debitos') {
       const totalDebitoTotal = debitList.reduce((sum, item) => sum + item.total, 0);
-      text += `💸 *Relatório de Débitos Pendentes*\n`;
+      text += `\u{1F4B8} *Relatório de Débitos Pendentes*\n`;
       text += `==================================\n`;
-      text += `⚠️ *Total Pendente Acumulado:* ${fmtMoney(totalDebitoTotal)}\n\n`;
+      text += `\u{26A0}\u{FE0F} *Total Pendente Acumulado:* ${fmtMoney(totalDebitoTotal)}\n\n`;
       
       debitList.forEach((item, idx) => {
         text += `• #${idx+1} *${item.client.nome}*: ${fmtMoney(item.total)} (${item.client.celular})\n`;

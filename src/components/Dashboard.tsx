@@ -424,8 +424,7 @@ const AlertsBlock: React.FC<{
   clients: Client[];
   stock: { id: string; nome: string; qtd: number; min: number }[];
   todayISO: string;
-  settings: ProfessionalSettings;
-}> = ({ appointments, clients, stock, todayISO, settings }) => {
+}> = ({ appointments, clients, stock, todayISO }) => {
   // 1. Clientes Sumidas Churn (>= 30 days)
   const clientLastVisitMap: Record<string, string> = {};
   appointments
@@ -448,8 +447,18 @@ const AlertsBlock: React.FC<{
 
   const handleRescueAll = () => {
     if (churnClients.length === 0) return;
-    const listNames = churnClients.slice(0, 5).map(c => c.nome).join(', ');
-    alert(`Mensagem de resgate da ${settings.nomeProfissional || 'Profissional'} enviada para: ${listNames}...`);
+    
+    const confirmStart = confirm(`Deseja iniciar a campanha de resgate para as ${churnClients.length} clientes sumidas?`);
+    if (!confirmStart) return;
+
+    churnClients.forEach(c => {
+      const confirmSend = confirm(`Deseja enviar mensagem de resgate no WhatsApp para ${c.nome} (${c.celular})?`);
+      if (confirmSend) {
+        const text = `Oi *${c.nome}*, tudo bem? \u{1F970}\nSentimos sua falta por aqui! Faz um tempinho que você não vem fazer suas unhas. Que tal agendarmos um horário para deixar suas unhas lindas de novo? \u{1F485}\u{2728} Estou com alguns horários disponíveis esta semana, vamos reservar o seu? \u{1F9E1}`;
+        const cleanPhone = c.celular.replace(/\D/g, '');
+        window.open(`https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(text)}`, '_blank');
+      }
+    });
   };
 
   // 2. Aniversariantes do dia
@@ -476,10 +485,27 @@ const AlertsBlock: React.FC<{
             <span className="text-xs font-bold text-danger uppercase tracking-wider block">Clientes Sumidas (Churn)</span>
             <h4 className="text-xl font-extrabold text-danger mt-1">{churnClients.length} em risco</h4>
             <p className="text-xs text-text-muted mt-1">Clientes inativas ou sem atendimentos nos últimos 30 dias.</p>
+            {churnClients.length > 0 && (
+              <div className="mt-2.5 text-[11px] text-text-muted bg-bg/50 p-2 rounded max-h-[85px] overflow-y-auto border border-border/40 scrollbar-thin">
+                <span className="font-bold text-text-muted block mb-1">Quem sumiu:</span>
+                <div className="flex flex-wrap gap-1">
+                  {churnClients.map(c => (
+                    <span key={c.id} className="bg-active border border-border/60 px-1.5 py-0.5 rounded text-[10px] text-text whitespace-nowrap">
+                      👤 {c.nome}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <button
             onClick={handleRescueAll}
-            className="w-full py-2 bg-danger text-white text-xs font-bold rounded shadow hover:opacity-90 transition-all text-center"
+            disabled={churnClients.length === 0}
+            className={`w-full py-2 text-xs font-bold rounded shadow transition-all text-center ${
+              churnClients.length === 0
+                ? 'bg-active border border-border text-text-subtle cursor-not-allowed opacity-60'
+                : 'bg-danger text-white hover:opacity-90 cursor-pointer'
+            }`}
           >
             📱 Campanha de Resgate WhatsApp
           </button>
@@ -609,10 +635,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (!client) return;
 
     // Use professional name/business name in the message
-    const bizSuffix = settings.nomeNegocio ? ` &mdash; *${settings.nomeNegocio}*` : '';
-    const profPrefix = settings.nomeProfissional ? `Olá, aqui é a *${settings.nomeProfissional}*! ✨\n` : 'Olá! ✨\n';
+    const bizSuffix = settings.nomeNegocio ? ` \u2014 *${settings.nomeNegocio}*` : '';
+    const profPrefix = settings.nomeProfissional ? `Olá, aqui é a *${settings.nomeProfissional}*! \u{2728}\n` : 'Olá! \u{2728}\n';
 
-    const text = `${profPrefix}Passando para confirmar seu horário hoje às *${apt.hora}* para o serviço de *${service ? service.nome : 'unhas'}*.\nConfirma?${bizSuffix} 💅`;
+    const text = `${profPrefix}Passando para confirmar seu horário hoje às *${apt.hora}* para o serviço de *${service ? service.nome : 'unhas'}*.\nConfirma?${bizSuffix} \u{1F485}`;
     const cleanPhone = client.celular.replace(/\D/g, '');
     window.open(`https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -770,7 +796,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           clients={clients}
           stock={stock}
           todayISO={todayISO}
-          settings={settings}
         />
       )}
 

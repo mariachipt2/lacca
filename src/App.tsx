@@ -7,6 +7,7 @@ import { ClientesView } from './components/ClientesView';
 import { RelatoriosView } from './components/RelatoriosView';
 import { ContasPagarView } from './components/ContasPagarView';
 import { ConfiguracoesView } from './components/ConfiguracoesView';
+import { LogsView } from './components/LogsView';
 import { 
   lerConfiguracoesGestorDb, 
   salvarConfiguracoesGestorDb, 
@@ -15,7 +16,7 @@ import {
   excluirContaPagarDb 
 } from './utils/storage';
 import { supabase } from './utils/supabaseClient';
-import type { Client, Service, Appointment, Transaction, Bill, ProfessionalSettings } from './types/database';
+import type { Client, Service, Appointment, Transaction, Bill, ProfessionalSettings, AuditLog } from './types/database';
 
 // Defaults
 const DEFAULT_SERVICES: Service[] = [
@@ -77,7 +78,7 @@ export const App: React.FC = () => {
   const [user, setUser] = useState<{ email: string; role: 'admin' | 'client'; name: string } | null>(null);
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'servicos' | 'estoque' | 'relatorios' | 'contas_pagar' | 'configuracoes'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'agenda' | 'clientes' | 'servicos' | 'estoque' | 'relatorios' | 'contas_pagar' | 'configuracoes' | 'logs'>('dashboard');
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [filterLowStock, setFilterLowStock] = useState(false);
 
@@ -104,6 +105,7 @@ export const App: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [stock, setStock] = useState<{ id: string; nome: string; qtd: number; min: number }[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleEmail, setGoogleEmail] = useState('');
@@ -196,6 +198,25 @@ export const App: React.FC = () => {
         .select('*');
       if (transactionsErr) throw transactionsErr;
       setTransactions((transactionsData || []).map(mapTransactionFromDb));
+
+      // 9. Fetch audit logs
+      const { data: logsData, error: logsErr } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (!logsErr && logsData) {
+        setLogs((logsData || []).map(l => ({
+          id: l.id,
+          userEmail: l.user_email,
+          acao: l.acao,
+          entidade: l.entidade,
+          registroId: l.registro_id,
+          detalhes: l.detalhes,
+          valorAnterior: l.valor_anterior,
+          valorNovo: l.valor_novo,
+          createdAt: l.created_at
+        })));
+      }
 
     } catch (error) {
       console.error('Erro ao carregar dados do usuário:', error);
@@ -436,6 +457,14 @@ export const App: React.FC = () => {
           created_at: newTxn.createdAt
         });
       }
+
+      // Log appointment creation
+      const client = clients.find(c => c.id === newApt.clientId);
+      const service = services.find(s => s.id === newApt.serviceId);
+      const clientName = client ? client.nome : 'Bloqueio';
+      const serviceName = service ? service.nome : 'Compromisso';
+      registrarLog('Criação', 'Agendamento', newApt.id, `Agendamento criado para ${clientName} - ${serviceName} em ${newApt.data} às ${newApt.hora}`, null, newApt);
+
     } catch (err) {
       console.error('Erro ao adicionar agendamento:', err);
     }
@@ -448,8 +477,13 @@ export const App: React.FC = () => {
     setTransactions(nextTxns);
 
     try {
+      const oldApt = appointments.find(a => a.id === id);
       await supabase.from('appointments').update({ status: 'Cancelado' }).eq('id', id);
       await supabase.from('transactions').delete().eq('appointment_id', id);
+      if (oldApt) {
+        const client = clients.find(c => c.id === oldApt.clientId);
+        registrarLog('Edição', 'Agendamento', id, `Agendamento cancelado para ${client ? client.nome : 'Cliente'} em ${oldApt.data} às ${oldApt.hora}`, oldApt, { ...oldApt, status: 'Cancelado' });
+      }
     } catch (err) {
       console.error('Erro ao cancelar agendamento:', err);
     }
@@ -503,6 +537,10 @@ export const App: React.FC = () => {
       if (txnsToAdd.length > 0) {
         await supabase.from('transactions').insert(txnsToAdd);
       }
+      if (apt) {
+        const client = clients.find(c => c.id === apt.clientId);
+        registrarLog('Edição', 'Agendamento', id, `Agendamento concluído para ${client ? client.nome : 'Cliente'} em ${apt.data} às ${apt.hora} (Método: ${mainMethod})`, apt, { ...apt, status: 'Concluído', paymentMethod: mainMethod });
+      }
     } catch (err) {
       console.error('Erro ao concluir agendamento:', err);
     }
@@ -540,6 +578,9 @@ export const App: React.FC = () => {
          .eq('tipo', 'Receita')
          .in('appointment_id', clientAppointmentIds)
          .or('payment_method.eq.Pagar Depois,payment_method.is.null');
+
+      const client = clients.find(c => c.id === clientId);
+      registrarLog('Edição', 'Financeiro', clientId, `Quitação de débitos pendentes da cliente ${client ? client.nome : clientId} via ${paymentMethod}`, null, null);
     } catch (err) {
       console.error('Erro ao quitar débitos:', err);
     }
@@ -555,9 +596,13 @@ export const App: React.FC = () => {
   };
 
   const handleSaveBill = async (bill: Bill) => {
+    let isEdit = false;
+    let oldBill: Bill | null = null;
     setBills(prev => {
       const index = prev.findIndex(b => b.id === bill.id);
       if (index >= 0) {
+        isEdit = true;
+        oldBill = prev[index];
         const next = [...prev];
         next[index] = bill;
         return next;
@@ -569,12 +614,21 @@ export const App: React.FC = () => {
     const session = sessionRes.data.session;
     if (session) {
       await salvarContaPagarDb(bill, session.user.id);
+      if (isEdit && oldBill) {
+        registrarLog('Edição', 'Contas', bill.id, `Conta a pagar '${bill.descricao}' atualizada para status ${bill.status} (Valor: R$ ${bill.valor.toFixed(2)}, Vencimento: ${bill.dataVencimento})`, oldBill, bill);
+      } else {
+        registrarLog('Criação', 'Contas', bill.id, `Conta a pagar '${bill.descricao}' criada com status ${bill.status} (Valor: R$ ${bill.valor.toFixed(2)}, Vencimento: ${bill.dataVencimento})`, null, bill);
+      }
     }
   };
 
   const handleDeleteBill = async (id: string) => {
+    const oldBill = bills.find(b => b.id === id);
     setBills(prev => prev.filter(b => b.id !== id));
     await excluirContaPagarDb(id);
+    if (oldBill) {
+      registrarLog('Exclusão', 'Contas', id, `Conta a pagar '${oldBill.descricao}' excluída`, oldBill, null);
+    }
   };
 
   const handleUpdateAppointmentTime = async (id: string, hora: string) => {
@@ -601,8 +655,67 @@ export const App: React.FC = () => {
     localStorage.removeItem('nail_google_email');
   };
 
+  const registrarLog = async (
+    acao: 'Criação' | 'Edição' | 'Exclusão',
+    entidade: 'Cliente' | 'Agendamento' | 'Serviço' | 'Financeiro' | 'Estoque' | 'Contas',
+    registroId: string,
+    detalhes: string,
+    valorAnterior?: any,
+    valorNovo?: any
+  ) => {
+    const userEmail = user?.email || 'admin@lacca.com';
+    try {
+      const { data, error } = await supabase
+        .from('audit_logs')
+        .insert({
+          user_email: userEmail,
+          acao,
+          entidade,
+          registro_id: registroId,
+          detalhes,
+          valor_anterior: valorAnterior || null,
+          valor_novo: valorNovo || null
+        })
+        .select('*')
+        .single();
+      
+      if (error) throw error;
+      if (data) {
+        setLogs(prev => [
+          {
+            id: data.id,
+            userEmail: data.user_email,
+            acao: data.acao,
+            entidade: data.entidade,
+            registroId: data.registro_id,
+            detalhes: data.detalhes,
+            valorAnterior: data.valor_anterior,
+            valorNovo: data.valor_novo,
+            createdAt: data.created_at
+          },
+          ...prev
+        ]);
+      }
+    } catch (err) {
+      console.error('Erro ao salvar log de auditoria no Supabase:', err);
+      const fallbackLog: AuditLog = {
+        id: 'log_' + Date.now(),
+        userEmail,
+        acao,
+        entidade,
+        registroId,
+        detalhes,
+        valorAnterior,
+        valorNovo,
+        createdAt: new Date().toISOString()
+      };
+      setLogs(prev => [fallbackLog, ...prev]);
+    }
+  };
+
   const handleDeleteAppointment = async (id: string) => {
     if (!confirm('Deseja excluir este agendamento?')) return;
+    const oldApt = appointments.find(a => a.id === id);
     const nextApts = appointments.filter(a => a.id !== id);
     const nextTxns = transactions.filter(t => t.appointmentId !== id);
     setAppointments(nextApts);
@@ -611,13 +724,18 @@ export const App: React.FC = () => {
     try {
       await supabase.from('appointments').delete().eq('id', id);
       await supabase.from('transactions').delete().eq('appointment_id', id);
+      if (oldApt) {
+        const client = clients.find(c => c.id === oldApt.clientId);
+        const clientName = client ? client.nome : 'Bloqueio';
+        registrarLog('Exclusão', 'Agendamento', id, `Agendamento excluído para ${clientName} em ${oldApt.data} às ${oldApt.hora}`, oldApt, null);
+      }
     } catch (err) {
       console.error('Erro ao excluir agendamento:', err);
     }
   };
 
   // Clients
-  const handleAddClient = async (clientData: Omit<Client, 'id' | 'createdAt'>) => {
+  const handleAddClient = async (clientData: Omit<Client, 'id' | 'createdAt'>): Promise<Client> => {
     const newClient: Client = {
       ...clientData,
       id: 'cli_' + Date.now(),
@@ -638,12 +756,15 @@ export const App: React.FC = () => {
         obs_tecnicas: newClient.obsTecnicas || null,
         fotos_unhas: newClient.fotosUnhas
       });
+      registrarLog('Criação', 'Cliente', newClient.id, `Cliente ${newClient.nome} cadastrado(a)`, null, newClient);
     } catch (err) {
       console.error('Erro ao cadastrar cliente:', err);
     }
+    return newClient;
   };
 
   const handleEditClient = async (id: string, clientData: Omit<Client, 'id' | 'createdAt'>) => {
+    const oldClient = clients.find(c => c.id === id);
     const nextClients = clients.map(c => (c.id === id ? { ...c, ...clientData } : c));
     setClients(nextClients);
 
@@ -656,12 +777,16 @@ export const App: React.FC = () => {
         alergias: clientData.alergias || null,
         obs_tecnicas: clientData.obsTecnicas || null
       }).eq('id', id);
+      if (oldClient) {
+        registrarLog('Edição', 'Cliente', id, `Cliente ${clientData.nome} editado(a)`, oldClient, { ...oldClient, ...clientData });
+      }
     } catch (err) {
       console.error('Erro ao editar cliente:', err);
     }
   };
 
   const handleDeleteClient = async (id: string) => {
+    const oldClient = clients.find(c => c.id === id);
     const nextClients = clients.filter(c => c.id !== id);
     const nextApts = appointments.filter(a => a.clientId !== id);
     setClients(nextClients);
@@ -670,6 +795,9 @@ export const App: React.FC = () => {
     try {
       await supabase.from('clients').delete().eq('id', id);
       await supabase.from('appointments').delete().eq('client_id', id);
+      if (oldClient) {
+        registrarLog('Exclusão', 'Cliente', id, `Cliente ${oldClient.nome} excluído(a) e agendamentos relacionados removidos`, oldClient, null);
+      }
     } catch (err) {
       console.error('Erro ao excluir cliente:', err);
     }
@@ -733,17 +861,22 @@ export const App: React.FC = () => {
         payment_method: newTxn.paymentMethod || null,
         created_at: newTxn.createdAt
       });
+      registrarLog('Criação', 'Financeiro', newTxn.id, `Transação manual adicionada: ${newTxn.tipo} - ${newTxn.descricao} (R$ ${newTxn.valor.toFixed(2)})`, null, newTxn);
     } catch (err) {
       console.error('Erro ao adicionar transação:', err);
     }
   };
 
   const handleDeleteTransaction = async (id: string) => {
+    const oldTxn = transactions.find(t => t.id === id);
     const nextTxns = transactions.filter(t => t.id !== id);
     setTransactions(nextTxns);
 
     try {
       await supabase.from('transactions').delete().eq('id', id);
+      if (oldTxn) {
+        registrarLog('Exclusão', 'Financeiro', id, `Transação manual excluída: ${oldTxn.tipo} - ${oldTxn.descricao} (R$ ${oldTxn.valor.toFixed(2)})`, oldTxn, null);
+      }
     } catch (err) {
       console.error('Erro ao excluir transação:', err);
     }
@@ -766,6 +899,9 @@ export const App: React.FC = () => {
 
     let targetService: Service;
     let nextServices = [...services];
+    const isEdit = !!editingService;
+    const oldService = editingService ? { ...editingService } : null;
+
     if (editingService) {
       targetService = { ...editingService, nome: srvName, preco: price, duracao: dur };
       nextServices = nextServices.map(s => (s.id === editingService.id ? targetService : s));
@@ -787,6 +923,11 @@ export const App: React.FC = () => {
         duracao: targetService.duracao,
         ativo: targetService.ativo !== false
       });
+      if (isEdit && oldService) {
+        registrarLog('Edição', 'Serviço', targetService.id, `Serviço '${targetService.nome}' editado (Preço: R$ ${targetService.preco.toFixed(2)}, Duração: ${targetService.duracao} min)`, oldService, targetService);
+      } else {
+        registrarLog('Criação', 'Serviço', targetService.id, `Serviço '${targetService.nome}' criado (Preço: R$ ${targetService.preco.toFixed(2)}, Duração: ${targetService.duracao} min)`, null, targetService);
+      }
     } catch (err) {
       console.error('Erro ao salvar serviço:', err);
     }
@@ -794,22 +935,30 @@ export const App: React.FC = () => {
 
   const handleDeleteService = async (id: string) => {
     if (!confirm('Deseja excluir este serviço? O histórico de agendamentos antigos pode quebrar se o serviço for removido permanentemente. Prefira inativar.')) return;
+    const oldService = services.find(s => s.id === id);
     const nextServices = services.filter(s => s.id !== id);
     setServices(nextServices);
 
     try {
       await supabase.from('services').delete().eq('id', id);
+      if (oldService) {
+        registrarLog('Exclusão', 'Serviço', id, `Serviço '${oldService.nome}' excluído permanentemente`, oldService, null);
+      }
     } catch (err) {
       console.error('Erro ao excluir serviço:', err);
     }
   };
 
   const handleToggleServiceActive = async (id: string, ativo: boolean) => {
+    const oldService = services.find(s => s.id === id);
     const nextServices = services.map(s => s.id === id ? { ...s, ativo } : s);
     setServices(nextServices);
 
     try {
       await supabase.from('services').update({ ativo }).eq('id', id);
+      if (oldService) {
+        registrarLog('Edição', 'Serviço', id, `Serviço '${oldService.nome}' ${ativo ? 'ativado' : 'inativado'}`, oldService, { ...oldService, ativo });
+      }
     } catch (err) {
       console.error('Erro ao alternar status do serviço:', err);
     }
@@ -824,6 +973,9 @@ export const App: React.FC = () => {
 
     let targetItem: { id: string; nome: string; qtd: number; min: number };
     let nextStock = [...stock];
+    const isEdit = !!editingStockItem;
+    const oldItem = editingStockItem ? { ...editingStockItem } : null;
+
     if (editingStockItem) {
       targetItem = { ...editingStockItem, nome: stockName, qtd, min };
       nextStock = nextStock.map(s => (s.id === editingStockItem.id ? targetItem : s));
@@ -843,6 +995,11 @@ export const App: React.FC = () => {
         qtd: targetItem.qtd,
         min: targetItem.min
       });
+      if (isEdit && oldItem) {
+        registrarLog('Edição', 'Estoque', targetItem.id, `Item '${targetItem.nome}' editado no estoque (Qtd: ${targetItem.qtd}, Min: ${targetItem.min})`, oldItem, targetItem);
+      } else {
+        registrarLog('Criação', 'Estoque', targetItem.id, `Item '${targetItem.nome}' adicionado ao estoque (Qtd: ${targetItem.qtd}, Min: ${targetItem.min})`, null, targetItem);
+      }
     } catch (err) {
       console.error('Erro ao salvar estoque:', err);
     }
@@ -850,6 +1007,7 @@ export const App: React.FC = () => {
 
   const adjustStockQuantity = async (id: string, amount: number) => {
     let updatedItem: any = null;
+    const oldItem = stock.find(s => s.id === id);
     const nextStock = stock.map(s => {
       if (s.id === id) {
         updatedItem = { ...s, qtd: Math.max(0, s.qtd + amount) };
@@ -862,6 +1020,9 @@ export const App: React.FC = () => {
     if (updatedItem) {
       try {
         await supabase.from('stock').update({ qtd: updatedItem.qtd }).eq('id', id);
+        if (oldItem) {
+          registrarLog('Edição', 'Estoque', id, `Quantidade de '${updatedItem.nome}' ajustada de ${oldItem.qtd} para ${updatedItem.qtd} (${amount > 0 ? '+' : ''}${amount})`, oldItem, updatedItem);
+        }
       } catch (err) {
         console.error('Erro ao ajustar quantidade:', err);
       }
@@ -870,11 +1031,15 @@ export const App: React.FC = () => {
 
   const handleDeleteStock = async (id: string) => {
     if (!confirm('Deseja excluir este produto do estoque?')) return;
+    const oldItem = stock.find(s => s.id === id);
     const nextStock = stock.filter(s => s.id !== id);
     setStock(nextStock);
 
     try {
       await supabase.from('stock').delete().eq('id', id);
+      if (oldItem) {
+        registrarLog('Exclusão', 'Estoque', id, `Item '${oldItem.nome}' excluído do estoque`, oldItem, null);
+      }
     } catch (err) {
       console.error('Erro ao excluir item:', err);
     }
@@ -1075,6 +1240,16 @@ export const App: React.FC = () => {
           >
             Log Out
           </button>
+          <button
+            onClick={() => setActiveTab('logs')}
+            className={`w-full py-1.5 border text-xs font-bold rounded flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'logs'
+                ? 'bg-primary-lt border-primary text-primary'
+                : 'bg-card border-border text-text-muted hover:text-text hover:bg-active'
+            }`}
+          >
+            <span>📜</span> Logs
+          </button>
         </div>
       </aside>
 
@@ -1085,7 +1260,7 @@ export const App: React.FC = () => {
         <header className="sticky top-0 z-[900] bg-surface/90 backdrop-blur-md h-[70px] border-b border-border flex justify-between items-center px-6 md:px-8">
           <div>
             <h2 className="text-xl font-extrabold text-text capitalize">
-              {activeTab === 'relatorios' ? 'Relatórios' : activeTab === 'contas_pagar' ? 'Contas a Pagar' : activeTab === 'configuracoes' ? 'Configurações' : activeTab}
+              {activeTab === 'relatorios' ? 'Relatórios' : activeTab === 'contas_pagar' ? 'Contas a Pagar' : activeTab === 'configuracoes' ? 'Configurações' : activeTab === 'logs' ? 'Logs' : activeTab}
             </h2>
             <p className="text-xs text-text-muted">NailArt Pro &mdash; Gestão</p>
           </div>
@@ -1129,6 +1304,7 @@ export const App: React.FC = () => {
               onCompleteAppointment={handleCompleteAppointment}
               onDeleteAppointment={handleDeleteAppointment}
               onUpdateAppointmentTime={handleUpdateAppointmentTime}
+              onAddClient={handleAddClient}
               googleConnected={googleConnected}
               googleEmail={googleEmail}
               onConnectGoogle={handleConnectGoogle}
@@ -1340,11 +1516,11 @@ export const App: React.FC = () => {
             };
 
             const exportStockWhatsApp = () => {
-              let message = `*Relatório de Estoque - NailArt Pro* 💅\n`;
+              let message = `*Relatório de Estoque - NailArt Pro* \u{1F485}\n`;
               message += `Gerado em: ${new Date().toLocaleDateString('pt-BR')}\n\n`;
               
               displayedStock.forEach(s => {
-                const statusEmoji = s.qtd <= s.min ? '⚠️' : '✅';
+                const statusEmoji = s.qtd <= s.min ? '\u{26A0}\u{FE0F}' : '\u{2705}';
                 message += `${statusEmoji} *${s.nome}*\n   Qtd: ${s.qtd} (Mín: ${s.min}) - ${s.qtd <= s.min ? 'PRECISA DE REPOSIÇÃO' : 'OK'}\n`;
               });
               
@@ -1501,6 +1677,12 @@ export const App: React.FC = () => {
               onSaveSettings={handleSaveSettings}
             />
           )}
+
+          {activeTab === 'logs' && (
+            <LogsView
+              logs={logs}
+            />
+          )}
         </div>
 
       </main>
@@ -1610,10 +1792,21 @@ export const App: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  setActiveTab('configuracoes');
+                  setActiveTab('logs');
                   setShowMoreMenu(false);
                 }}
                 className={`flex items-center gap-3 p-3 text-sm font-semibold rounded-md border border-border transition-all ${
+                  activeTab === 'logs' ? 'bg-primary-lt border-primary text-primary' : 'bg-card text-text hover:bg-surface-active'
+                }`}
+              >
+                <span className="text-lg">📜</span> Logs
+              </button>
+              <button
+                onClick={() => {
+                  setActiveTab('configuracoes');
+                  setShowMoreMenu(false);
+                }}
+                className={`col-span-2 flex items-center gap-3 p-3 text-sm font-semibold rounded-md border border-border transition-all ${
                   activeTab === 'configuracoes' ? 'bg-primary-lt border-primary text-primary' : 'bg-card text-text hover:bg-surface-active'
                 }`}
               >
